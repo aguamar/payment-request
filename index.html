@@ -11,28 +11,36 @@
     var respecConfig = {
       github: "https://github.com/w3c/payment-request/",
       specStatus: "ED",
-      editors: [{
-        name: "Adrian Bateman",
-        company: "Microsoft Corporation",
-        w3cid: 42763,
-      }, {
-        name: "Zach Koch",
-        company: "Google",
-        w3cid: 76588,
-      }, {
-        name: "Roy McElmurry",
-        company: "Facebook",
-        w3cid: 88345,
-      }, {
-        name: "Domenic Denicola",
-        company: "Google",
-        w3cid: 52873,
-      }, {
-        name: "Marcos Cáceres",
-        company: "Mozilla",
-        w3cid: 39125,
-      }],
-      crEnd: "2017-10-31",
+      formerEditors: [
+        {
+          name: "Adrian Bateman",
+          company: "Microsoft Corporation",
+          w3cid: 42763,
+        },
+      ],
+      editors: [
+        {
+          name: "Marcos Cáceres",
+          company: "Mozilla",
+          w3cid: 39125,
+        },
+        {
+          name: "Domenic Denicola",
+          company: "Google",
+          w3cid: 52873,
+        },
+        {
+          name: "Zach Koch",
+          company: "Google",
+          w3cid: 76588,
+        },
+        {
+          name: "Roy McElmurry",
+          company: "Facebook",
+          w3cid: 88345,
+        },
+      ],
+      crEnd: "2018-10-31",
       license: "w3c-software-doc",
       previousMaturity: "WD",
       previousPublishDate: "2016-07-05",
@@ -40,8 +48,19 @@
       wgURI: "https://www.w3.org/Payments/WG/",
       wgPatentURI: "https://www.w3.org/2004/01/pp-impl/83744/status",
       testSuiteURI: "https://w3c-test.org/payment-request/",
-      implementationReportURI: "https://w3c.github.io/payment-request/reports/implementation.html",
-      // caniuse: "payment-request", TODO: enable when https://github.com/w3c/respec/issues/1614 is fixed
+      implementationReportURI:
+        "https://w3c.github.io/test-results/payment-request/all.html",
+      caniuse: "payment-request",
+      lint: {
+        "no-headingless-sections": true,
+        "privsec-section": true,
+        "no-http-props": true,
+        "check-punctuation": true,
+      },
+      doJsonLd: true,
+      highlightVars: true,
+      pluralize: true,
+      xrefs: true,
     };
     </script>
     <style>
@@ -54,6 +73,9 @@
     </style>
   </head>
   <body>
+    <h1 id="title">
+      Payment Request API
+    </h1>
     <section id='abstract'>
       <p>
         This specification standardizes an API to allow merchants (i.e. web
@@ -69,10 +91,6 @@
         a list of all bug reports that the group has not yet addressed</a>.
         Pull requests with proposed specification text for outstanding issues
         are strongly encouraged.
-      </p>
-      <p>
-        The deadline for comments for Candidate Recommendation is 31 October
-        2017.
       </p>
       <div class="note" title="Sending comments on this document">
         <p>
@@ -112,12 +130,6 @@
           before proceeding along the W3C Recommendation track.
         </p>
         <ul>
-          <li>
-            <a data-lt=
-            "PaymentCurrencyAmount.currencySystem">currencySystem</a> (see
-            <a href="https://github.com/w3c/payment-request/issues/617">issue
-            617</a>).
-          </li>
           <li data-link-for="PaymentItem">
             <a>PaymentItem</a>'s <a>type</a> member and the
             <a>PaymentItemType</a> enum (see <a href=
@@ -133,6 +145,11 @@
           implementations in a timely manner. However, if it gets interoperably
           implemented relatively quickly, the feature will remain in this
           version of the specification.
+          </li>
+          <li data-link-for="PaymentAddress">Due to <a>PaymentAddress</a>'s <a>
+            languageCode</a> attribute only being implemented in one browser
+            (Chrome), the attribute, and all its associated spec text, is <a>at
+            risk</a>.
           </li>
         </ul>
       </section>
@@ -153,18 +170,49 @@
         <li>the payer: the party that makes a purchase at that online store,
         and who authenticates and authorizes payment as required.
         </li>
-        <li>the <dfn data-lt="payment methods">payment method</dfn> provider:
-        the party that provides the means (e.g., credit card) that the payer
-        uses to pay, and that is accepted by the payee.
+        <li>the <dfn>payment method</dfn> provider: the party that provides the
+        means (e.g., credit card) that the payer uses to pay, and that is
+        accepted by the payee.
         </li>
       </ul>
       <p>
         The details of how to fulfill a payment request for a given <a>payment
-        method</a> are handled by <dfn data-lt="payment handler">payment
-        handlers</dfn>. In this specification, these details are left up to the
-        <a>user agent</a>, but future specifications may expand on the
-        processing model in more detail.
+        method</a> is an implementation detail of a <dfn>payment handler</dfn>.
+        Concretely, each payment handler defines:
       </p>
+      <dl>
+        <dt>
+          <dfn>Steps to check if a payment can be made</dfn>:
+        </dt>
+        <dd>
+          How a payment handler determines whether it, or the user, can
+          potentially "make a payment" is also an implementation detail of a
+          payment handler. For an example, see the <a data-cite=
+          "payment-method-basic-card#steps-to-check-if-a-payment-can-be-made">can
+          make payment</a> algorithm of [[payment-method-basic-card]].
+        </dd>
+        <dt>
+          <dfn>Steps to respond to a payment request</dfn>:
+        </dt>
+        <dd>
+          Steps that return an object or <a data-cite=
+          "WEBIDL#idl-dictionary">dictionary</a> that a merchant uses to
+          process or validate the transaction. The structure of this object is
+          specific to each <a>payment method</a>. For an example of such an
+          object, see the <code><a data-cite=
+          "payment-method-basic-card#dom-basiccardresponse">BasicCardResponse</a></code>
+          dictionary of [[payment-method-basic-card]].
+        </dd>
+        <dt>
+          <dfn>Steps for when a user changes payment method</dfn> (optional)
+        </dt>
+        <dd>
+          Steps that describe how to handle the user changing payment method or
+          monetary instrument (e.g., from a debit card to a credit card) that
+          results in a <a data-cite="WEBIDL#idl-dictionary">dictionary</a> or
+          <a data-cite="WEBIDL#idl-object">object</a> or null.
+        </dd>
+      </dl>
       <p>
         This API also enables web sites to take advantage of more secure
         payment schemes (e.g., tokenization and system-level authentication)
@@ -231,7 +279,7 @@
         </li>
         <li>The <var>options</var>: Optionally, a list of things as
         <a>PaymentOptions</a> that the site needs to deliver the good or
-        service (e.g., for physical goods, the merchant will typically need an
+        service (e.g., for physical goods, the merchant will typically need a
         physical address to ship to. For digital goods, an email will usually
         suffice).
         </li>
@@ -438,15 +486,14 @@
           };
           // Sync update to the total
           request.onshippingoptionchange = ev =&gt; {
-            const shippingOption = shippingOptions.find(
-              option =&gt; option.id === request.id
-            );
+            // selected shipping option
+            const { shippingOption } = request;
             const newTotal = {
               currency: "USD",
               label: "Total due",
               value: calculateNewTotal(shippingOption),
             };
-            ev.updateWith({ ...details, total: newTotal });
+            ev.updateWith({ total: newTotal });
           };
           async function checkShipping(request) {
             try {
@@ -455,10 +502,42 @@
               await ensureCanShipTo(json);
               const { shippingOptions, total } = await calculateShipping(json);
 
-              return { ...details, shippingOptions, total };
+              return { shippingOptions, total };
             } catch (err) {
-              return { ...details, error: `Sorry! we can't ship to your address.` };
+              return { error: `Sorry! we can't ship to your address.` };
             }
+          }
+        </pre>
+      </section>
+      <section>
+        <h3>
+          Fine-grained error reporting
+        </h3>
+        <p>
+          A developer can use the <a data-link-for=
+          "PaymentDetailsUpdate">shippingAddressErrors</a> member of the
+          <a>PaymentDetailsUpdate</a> dictionary to indicate that there are
+          validation errors with specific attributes of a
+          <a>PaymentAddress</a>. The <a data-link-for=
+          "PaymentDetailsUpdate">shippingAddressErrors</a> member is a
+          <a>AddressErrors</a> dictionary, whose members specifically demarcate
+          the fields of a <a>physical address</a> that are erroneous while also
+          providing helpful error messages to be displayed to the end user.
+        </p>
+        <pre class="example">
+          request.onshippingaddresschange = ev =&gt; {
+            ev.updateWith(validateAddress(request.shippingAddress));
+          };
+          function validateAddress(shippingAddress) {
+            const error = "Can't ship to this address.";
+            const shippingAddressErrors = {
+              city: "FarmVille is not a real place.",
+              postalCode: "Unknown postal code for your country.",
+            };
+            // Empty shippingOptions implies that we can't ship
+            // to this address.
+            const shippingOptions = [];
+            return { error, shippingAddressErrors, shippingOptions };
           }
         </pre>
       </section>
@@ -504,8 +583,11 @@
         [Constructor(sequence&lt;PaymentMethodData&gt; methodData, PaymentDetailsInit details, optional PaymentOptions options),
         SecureContext, Exposed=Window]
         interface PaymentRequest : EventTarget {
+          [NewObject]
           Promise&lt;PaymentResponse&gt; show(optional Promise&lt;PaymentDetailsUpdate&gt; detailsPromise);
+          [NewObject]
           Promise&lt;void&gt; abort();
+          [NewObject]
           Promise&lt;boolean&gt; canMakePayment();
 
           readonly attribute DOMString id;
@@ -513,9 +595,10 @@
           readonly attribute DOMString? shippingOption;
           readonly attribute PaymentShippingType? shippingType;
 
+          attribute EventHandler onmerchantvalidation;
           attribute EventHandler onshippingaddresschange;
-
           attribute EventHandler onshippingoptionchange;
+          attribute EventHandler onpaymentmethodchange;
         };
       </pre>
       <div class="note">
@@ -548,12 +631,14 @@
           Constructor
         </h2>
         <p>
-          The <a>PaymentRequest</a> is constructed using the supplied
-          <var>methodData</var> list including any <a>payment method</a>
-          specific <a data-lt="PaymentMethodData.data">data</a>, the payment
-          <var>details</var>, and the payment <var>options</var>.
+          The <a>PaymentRequest</a> is constructed using the supplied sequence
+          of <a>PaymentMethodData</a> <var>methodData</var> including any
+          <a>payment method</a> specific <a data-lt=
+          "PaymentMethodData.data">data</a>, the <a>PaymentDetailsInit</a>
+          <var>details</var>, and the <a>PaymentOptions</a> <var>options</var>.
         </p>
-        <p data-tests="payment-request-constructor.https.html">
+        <p data-tests=
+        "payment-request-constructor.https.html payment-request-insecure.http.html">
           The <code><dfn data-lt=
           "PaymentRequest.PaymentRequest()">PaymentRequest(<var>methodData</var>,
           <var>details</var>, <var>options</var>)</dfn></code> constructor MUST
@@ -561,9 +646,9 @@
         </p>
         <ol data-link-for="PaymentDetailsBase" class="algorithm">
           <li data-tests=
-          "active-document-cross-origin.https.sub.html, active-document-same-origin.https.html, removing-allowpaymentrequest.https.sub.html, setting-allowpaymentrequest-timing.https.sub.html, setting-allowpaymentrequest.https.sub.html">
+          "allowpaymentrequest/active-document-cross-origin.https.sub.html, allowpaymentrequest/active-document-same-origin.https.html, allowpaymentrequest/removing-allowpaymentrequest.https.sub.html, allowpaymentrequest/setting-allowpaymentrequest-timing.https.sub.html, allowpaymentrequest/setting-allowpaymentrequest.https.sub.html">
           If the <a>current settings object</a>'s <a data-cite=
-          "!HTML#responsible-document">responsible document</a> is not
+          "HTML#responsible-document">responsible document</a> is not
           <a>allowed to use</a> the feature indicated by attribute name
           <a>allowpaymentrequest</a>, then <a>throw</a> a
           "<a>SecurityError</a>" <a>DOMException</a>.
@@ -577,7 +662,7 @@
                 missing, add an <a data-lt="PaymentDetailsInit.id">id</a>
                 member to <var>details</var> and set its value to a
                 <abbr title="Universally Unique Identifier">UUID</abbr>
-                [[!RFC4122]].
+                [[RFC4122]].
               </li>
             </ol>
           </li>
@@ -597,9 +682,8 @@
                     <var>paymentMethod</var>.<a data-lt=
                     "PaymentMethodData.supportedMethods">supportedMethods</a>.
                     If it returns false, then throw a <a>RangeError</a>
-                    exception and terminate this algorithm. Optionally, inform
-                    the developer that the payment method identifier is
-                    invalid.
+                    exception. Optionally, inform the developer that the
+                    payment method identifier is invalid.
                   </li>
                   <li>If the <a data-lt="PaymentMethodData.data">data</a>
                   member of <var>paymentMethod</var> is missing, let
@@ -622,7 +706,7 @@
             <ol>
               <li data-tests=
               "payment-request-ctor-currency-code-checks.https.html">
-                <a>Check and canonicalize total</a>
+                <a>Check and canonicalize total amount</a>
                 <var>details</var>.<a>total</a>.<a data-lt=
                 "PaymentItem.amount">amount</a>. Rethrow any exceptions.
               </li>
@@ -647,18 +731,16 @@
             options</var> is present and set to true, process shipping options:
             <ol>
               <li>Let <var>options</var> be an empty <code><a data-cite=
-              "!WEBIDL#idl-sequence">sequence</a></code>&lt;<a>PaymentShippingOption</a>&gt;.
+              "WEBIDL#idl-sequence">sequence</a></code>&lt;<a>PaymentShippingOption</a>&gt;.
               </li>
               <li>If the <a>shippingOptions</a> member of <var>details</var> is
               present, then:
                 <ol data-link-for="PaymentShippingOption">
-                  <li>Let <var>seenIDs</var> be an empty list.
+                  <li>Let <var>seenIDs</var> be an empty set.
                   </li>
-                  <li>Set <var>options</var> to
+                  <li>For each <var>option</var> in
                   <var>details</var>.<a data-link-for=
-                  "PaymentDetailsBase">shippingOptions</a>.
-                  </li>
-                  <li>For each <var>option</var> in <var>options</var>:
+                  "PaymentDetailsBase">shippingOptions</a>:
                     <ol>
                       <li data-tests=
                       "payment-request-ctor-currency-code-checks.https.html">
@@ -675,10 +757,6 @@
                       <li>Otherwise, append <var>option</var>.<a>id</a> to
                       <var>seenIDs</var>.
                       </li>
-                    </ol>
-                  </li>
-                  <li>For each <var>option</var> in <var>options</var>:
-                    <ol>
                       <li>If <var>option</var>.<a>selected</a> is true, then
                       set <var>selectedShippingOption</var> to
                       <var>option</var>.<a>id</a>.
@@ -699,7 +777,7 @@
           modifiers:
             <ol>
               <li>Let <var>modifiers</var> be an empty <code><a data-cite=
-              "!WEBIDL#idl-sequence">sequence</a></code>&lt;<a>PaymentDetailsModifier</a>&gt;.
+              "WEBIDL#idl-sequence">sequence</a></code>&lt;<a>PaymentDetailsModifier</a>&gt;.
               </li>
               <li>If the <a>modifiers</a> member of <var>details</var> is
               present, then:
@@ -715,7 +793,7 @@
                         <ol>
                           <li data-tests=
                           "payment-request-ctor-currency-code-checks.https.html">
-                            <a>Check and canonicalize total</a>
+                            <a>Check and canonicalize total amount</a>
                             <var>modifier</var>.<a data-lt=
                             "PaymentDetailsModifier.total">total</a>.<a data-lt="PaymentItem.amount">amount</a>.
                             Rethrow any exceptions.
@@ -779,6 +857,8 @@
           <li>Set <var>request</var>.<a>[[\serializedMethodData]]</a> to <var>
             serializedMethodData</var>.
           </li>
+          <li>Set <var>request</var>.<a>[[\response]]</a> to null.
+          </li>
           <li>Set the value of <var>request</var>'s <a data-lt=
           "PaymentRequest.shippingOption">shippingOption</a> attribute to <var>
             selectedShippingOption</var>.
@@ -825,32 +905,30 @@
             It is not possible to show multiple <a>PaymentRequest</a>s at the
             same time within one <a>user agent</a>. If a <a>PaymentRequest</a>
             is already showing, calling <a>show()</a> —from any Web site— will
-            return a promise rejected with an "<a>AbortError</a>"
+            return <a>a promise rejected with</a> an "<a>AbortError</a>"
             <a>DOMException</a>.
           </p>
         </div>
-        <p data-tests=
-        "payment-request-show-method.https.html, payment-request-show-method-manual.https.html">
-          The <code><a data-lt="show()">show(detailsPromise)</a></code> method
-          MUST act as follows:
+        <p data-tests="payment-request-show-method.https.html">
+          The <code>show(optional <var>detailsPromise</var>)</code> method MUST
+          act as follows:
         </p>
         <ol class="algorithm">
           <li data-tests=
-          "payment-request-show-method-manual.https.html, show-method-postmessage-manual.https.html">
-          If the method was not <a>triggered by user activation</a>, return a
-          promise rejected with a "<a>SecurityError</a>" <a>DOMException</a>
-          and terminate this algorithm.
+          "payment-request-show-method.https.html, show-method-postmessage-manual.https.html">
+          If the method was not <a>triggered by user activation</a>, return <a>
+            a promise rejected with</a> with a "<a>SecurityError</a>"
+            <a>DOMException</a>.
           </li>
-          <li>Let <var>request</var> be the <a>PaymentRequest</a> object on
-          which the method is called.
+          <li>Let <var>request</var> be the <a>context object</a>.
           </li>
           <li>Let <var>document</var> be <var>request</var>'s <a data-cite=
-          "!HTML#concept-relevant-global">relevant global object</a>'s
-          <a data-cite="!HTML#concept-document-window">associated Document</a>.
+          "HTML#concept-relevant-global">relevant global object</a>'s
+          <a data-cite="HTML#concept-document-window">associated Document</a>.
           </li>
           <li data-tests="rejects_if_not_active.https.html">If
-          <var>document</var> is not <a data-cite="!HTML#fully-active">fully
-          active</a>, then return a promise rejected with an
+          <var>document</var> is not <a data-cite="HTML#fully-active">fully
+          active</a>, then return <a>a promise rejected with</a> an
           "<a>AbortError</a>" <a>DOMException</a>.
           </li>
           <li>
@@ -864,16 +942,16 @@
             </p>
           </li>
           <li>If <var>request</var>.<a>[[\state]]</a> is not "<a>created</a>"
-          then return a promise rejected with an "<a>InvalidStateError</a>" <a>
-            DOMException</a>.
+          then return <a>a promise rejected with</a> an
+          "<a>InvalidStateError</a>" <a>DOMException</a>.
           </li>
           <li>If the <a>user agent</a>'s <a>payment request is showing</a>
-          boolean is true, then return a promise rejected with an
+          boolean is true, then return <a>a promise rejected with</a> an
           "<a>AbortError</a>" <a>DOMException</a>.
           </li>
           <li>Set <var>request</var>.<a>[[\state]]</a> to "<a>interactive</a>".
           </li>
-          <li>Let <var>acceptPromise</var> be a new <a>Promise</a>.
+          <li>Let <var>acceptPromise</var> be <a>a new promise</a>.
           </li>
           <li>Set <var>request</var>.<a>[[\acceptPromise]]</a> to
           <var>acceptPromise</var>.
@@ -905,7 +983,7 @@
           <li>Return <var>acceptPromise</var> and perform the remaining steps
           <a>in parallel</a>.
           </li>
-          <li>Let <var>handlers</var> be an empty unordered set.
+          <li>Let <var>handlers</var> be an empty <a>list</a>.
           </li>
           <li>For each <var>paymentMethod</var> tuple in
           <var>request</var>.<a>[[\serializedMethodData]]</a>:
@@ -914,47 +992,74 @@
               <var>paymentMethod</var> tuple.
               </li>
               <li>Let <var>data</var> be the result of <a data-cite=
-              "!ECMASCRIPT#sec-json.parse">JSON-parsing</a> the second element
+              "ECMASCRIPT#sec-json.parse">JSON-parsing</a> the second element
               in the <var>paymentMethod</var> tuple.
               </li>
               <li>If required by the specification that defines the
-              <var>identifer</var>, then <a data-cite=
-              "!WEBIDL#dfn-convert-ecmascript-to-idl-value">convert</a>
-              <var>data</var> to an IDL value. Otherwise, <a data-cite=
-              "!WEBIDL#dfn-convert-ecmascript-to-idl-value">convert</a> to
-              <a data-cite="!WEBIDL#idl-object">object</a>.
+              <var>identifier</var>, then <a data-cite=
+              "WEBIDL#dfn-convert-ecmascript-to-idl-value">convert</a>
+              <var>data</var> to an IDL value of the type specified there.
+              Otherwise, <a data-cite=
+              "WEBIDL#dfn-convert-ecmascript-to-idl-value">convert</a> to
+              <a data-cite="WEBIDL#idl-object">object</a>.
               </li>
-              <li>If conversion results in an error, reject
-              <var>acceptPromise</var> with that error and terminate this
-              algorithm.
+              <li>If conversion results in an <a data-cite=
+              "WEBIDL#dfn-exception">exception</a> <var>error</var>:
+                <ol>
+                  <li>Set <var>request</var>.<a>[[\state]]</a> to
+                  "<a>closed</a>".
+                  </li>
+                  <li>Reject <var>acceptPromise</var> with <var>error</var>.
+                  </li>
+                  <li>Set <a>user agent</a>'s <a>payment request is showing</a>
+                  boolean to false.
+                  </li>
+                  <li>Terminate this algorithm.
+                  </li>
+                </ol>
               </li>
-              <li>If the user agent has a registered <a>payment handler</a>
-              that supports <var>identifier</var>, then check if the payment
-              handler is authorized and capable of handling the payment request
-              with <var>data</var>. If the check returns in the affirmative,
-              then add payment handler to <var>handlers</var>.
+              <li>Let <var>registeredHandlers</var> be a <a>list</a> of
+              registered payment handlers for the payment method
+              <var>identifier</var>.
+              </li>
+              <li>For each <var>handler</var> in <var>registeredHandlers</var>:
+                <ol>
+                  <li>Let <var>canMakePayment</var> be the result of running
+                  <var>handler</var>'s <a>steps to check if a payment can be
+                  made</a> with <var>data</var>.
+                  </li>
+                  <li>If <var>canMakePayment</var> is true, then append
+                  <var>handler</var> to <var>handlers</var>.
+                  </li>
+                </ol>
               </li>
             </ol>
           </li>
-          <li>If <var>handlers</var> is empty, then reject
-          <var>acceptPromise</var> with a "<a>NotSupportedError</a>"
-          <a>DOMException</a>, and set the <a>user agent</a>'s <a>payment
-          request is showing</a> boolean to false.
+          <li>If <var>handlers</var> is empty, then:
+            <ol>
+              <li>Set <var>request</var>.<a>[[\state]]</a> to "<a>closed</a>".
+              </li>
+              <li>Reject <var>acceptPromise</var> with
+              "<a>NotSupportedError</a>" <a>DOMException</a>.
+              </li>
+              <li>Set <a>user agent</a>'s <a>payment request is showing</a>
+              boolean to false.
+              </li>
+              <li>Terminate this algorithm.
+              </li>
+            </ol>
           </li>
-          <li>Otherwise, present a user interface that will allow the user to
-          interact with the <var>handlers</var>. The user agent SHOULD
-          prioritize the preference of the user when presenting payment
-          methods.
+          <li>Present a user interface that will allow the user to interact
+          with the <var>handlers</var>. The user agent SHOULD prioritize the
+          preference of the user when presenting payment methods. It is
+          RECOMMENDED that the language of the user interface match the
+          <a data-cite="HTML#language">language</a> of <a data-cite=
+          "HTML#the-body-element-2">the body element</a>.
           </li>
           <li data-tests=
           "show-method-optional-promise-rejects-manual.https.html, show-method-optional-promise-resolves-manual.https.html">
           If <var>detailsPromise</var> was passed, then:
             <ol>
-              <li>Set <var>request</var>.<a>[[\updating]]</a> to true.
-              </li>
-              <li>Disable the user interface user interface that will allow the
-              user to interact with the <var>handlers</var>
-              </li>
               <li>Run the <a>update a <code>PaymentRequest</code>'s details
               algorithm</a> with <var>detailsPromise</var> and
               <var>request</var>.
@@ -974,19 +1079,11 @@
           </li>
           <li>
             <p>
-              Otherwise, present a user interface to allow the user to interact
-              with the <var>handlers</var>. The user agent SHOULD prioritize
-              the preference of the user when presenting payment methods. It is
-              RECOMMENDED that the language of the user interface match the
-              <a data-cite="!HTML#language">language</a> of <a data-cite=
-              "HTML#the-body-element-2">the body element</a>.
-            </p>
-            <p>
               For the <a>payment handler</a> selected by the end-user, the user
               agent MUST pass the <a data-cite=
-              "!WEBIDL#dfn-convert-ecmascript-to-idl-value">converted</a>
-              second element in the <var>paymentMethod</var> tuple. Optionally,
-              the user agent SHOULD send the appropriate data from
+              "WEBIDL#dfn-convert-ecmascript-to-idl-value">converted</a> second
+              element in the <var>paymentMethod</var> tuple. Optionally, the
+              user agent SHOULD send the appropriate data from
               <var>request</var> to the user-selected <a>payment handler</a> in
               order to guide the user through the payment process. This
               includes the various attributes and internal slots of
@@ -999,14 +1096,22 @@
               or the <a>user aborts the payment request algorithm</a>, which
               are triggered through interaction with the user interface.
             </p>
-            <p data-test="rejects_if_not_active.https.html">
+            <p data-tests="rejects_if_not_active.https.html">
               If <var>document</var> stops being <a data-cite=
-              "!HTML#fully-active">fully active</a> while the user interface is
+              "HTML#fully-active">fully active</a> while the user interface is
               being shown, or no longer is by the time this step is reached,
-              then the user interface SHOULD be hidden, and
-              <var>acceptPromise</var> SHOULD be rejected with an
-              "<a>AbortError</a>" <a>DOMException</a>.
+              then:
             </p>
+            <ol>
+              <li>Close down the user interface.
+              </li>
+              <li>Set the <a>user agent</a>'s <a>payment request is showing</a>
+              boolean to false.
+              </li>
+              <li>Reject <var>acceptPromise</var> with an "<a>AbortError</a>"
+              <a>DOMException</a>.
+              </li>
+            </ol>
           </li>
         </ol>
       </section>
@@ -1020,12 +1125,12 @@
             the <a>user agent</a> to abort the payment <var>request</var> and
             to tear down any user interface that might be shown. The
             <a>abort()</a> can only be called after the <a>show()</a> method
-            has been called (see <a data-lt="state">states</a>) and before this
-            instance's <a>[[\acceptPromise]]</a> has been resolved. For
-            example, developers might choose to do this if the goods they are
-            selling are only available for a limited amount of time. If the
-            user does not accept the payment request within the allowed time
-            period, then the request will be aborted.
+            has been called (see <a>states</a>) and before this instance's
+            <a>[[\acceptPromise]]</a> has been resolved. For example,
+            developers might choose to do this if the goods they are selling
+            are only available for a limited amount of time. If the user does
+            not accept the payment request within the allowed time period, then
+            the request will be aborted.
           </p>
           <p>
             A <a>user agent</a> might not always be able to abort a request.
@@ -1038,18 +1143,22 @@
             request</a>.
           </p>
         </div>
-        <p data-tests="payment-request-abort-method-manual.https.html">
+        <p data-tests="payment-request-abort-method.https.html">
           The <a>abort()</a> method MUST act as follows:
         </p>
         <ol class="algorithm">
-          <li>Let <var>request</var> be the <a>PaymentRequest</a> object on
-          which the method is called.
+          <li>Let <var>request</var> be the <a>context object</a>.
+          </li>
+          <li>If <var>request</var>.<a>[[\response]]</a> is not null, and <var>
+            request</var>.<a>[[\response]]</a>.<a>[[\retryPromise]]</a> is not
+            null, return <a>a promise rejected with</a> an
+            "<a>InvalidStateError</a>" <a>DOMException</a>.
           </li>
           <li>If the value of <var>request</var>.<a>[[\state]]</a> is not
-          "<a>interactive</a>" then <a>throw</a> an "<a>InvalidStateError</a>"
-          <a>DOMException</a>.
+          "<a>interactive</a>" then return <a>a promise rejected with</a> an
+          "<a>InvalidStateError</a>" <a>DOMException</a>.
           </li>
-          <li>Let <var>promise</var> be a new <a>Promise</a>.
+          <li>Let <var>promise</var> be <a>a new promise</a>.
           </li>
           <li>Return <var>promise</var> and perform the remaining steps <a>in
           parallel</a>.
@@ -1065,8 +1174,7 @@
               then reject <var>promise</var> with "<a>InvalidStateError</a>"
               <a>DOMException</a> and abort these steps.
               </li>
-              <li>Set the value of the internal slot
-              <var>request</var>.<a>[[\state]]</a> to "<a>closed</a>".
+              <li>Set <var>request</var>.<a>[[\state]]</a> to "<a>closed</a>".
               </li>
               <li>Reject the promise
               <var>request</var>.<a>[[\acceptPromise]]</a> with an
@@ -1090,11 +1198,10 @@
           any of the desired <a>payment methods</a> supplied to the
           <a>PaymentRequest</a> constructor, and false if none are supported.
           If the method is called too often, the user agent might instead
-          return a promise rejected with a "<a>NotAllowedError</a>"
+          return <a>a promise rejected with</a> a "<a>NotAllowedError</a>"
           <a>DOMException</a>, at its discretion.
         </p>
-        <p data-tests=
-        "payment-request-canmakepayment-method-manual.https.html">
+        <p data-tests="payment-request-canmakepayment-method.https.html">
           The <a>canMakePayment()</a> method MUST act as follows:
         </p>
         <ol class="algorithm">
@@ -1102,11 +1209,12 @@
           which the method was called.
           </li>
           <li>If <var>request</var>.<a>[[\state]]</a> is not "<a>created</a>",
-          then return a promise rejected with an "<a>InvalidStateError</a>" <a>
-            DOMException</a>.
+          then return <a>a promise rejected with</a> an
+          "<a>InvalidStateError</a>" <a>DOMException</a>.
           </li>
-          <li>Optionally, at the <a>user agent</a>'s discretion, return a
-          promise rejected with a "<a>NotAllowedError</a>" <a>DOMException</a>.
+          <li>Optionally, at the <a>user agent</a>'s discretion, return <a>a
+          promise rejected with</a> a "<a>NotAllowedError</a>"
+          <a>DOMException</a>.
             <p class="note" data-link-for="PaymentRequest">
               This allows user agents to apply heuristics to detect and prevent
               abuse of the <a>canMakePayment()</a> method for fingerprinting
@@ -1118,7 +1226,7 @@
               time period in which those calls were made.
             </p>
           </li>
-          <li>Let <var>promise</var> be a new <a>Promise</a>.
+          <li>Let <var>promise</var> be <a>a new promise</a>.
           </li>
           <li>Return <var>promise</var>, and perform the remaining steps <a>in
           parallel</a>.
@@ -1130,25 +1238,35 @@
               <var>paymentMethod</var> tuple.
               </li>
               <li>Let <var>data</var> be the result of <a data-cite=
-              "!ECMASCRIPT#sec-json.parse">JSON-parsing</a> the second element
+              "ECMASCRIPT#sec-json.parse">JSON-parsing</a> the second element
               in the <var>paymentMethod</var> tuple.
               </li>
               <li>If required by the specification that defines the
-              <var>identifer</var>, then <a data-cite=
-              "!WEBIDL#dfn-convert-ecmascript-to-idl-value">convert</a>
+              <var>identifier</var>, then <a data-cite=
+              "WEBIDL#dfn-convert-ecmascript-to-idl-value">convert</a>
               <var>data</var> to an IDL value. Otherwise, <a data-cite=
-              "!WEBIDL#dfn-convert-ecmascript-to-idl-value">convert</a> to
-              <a data-cite="!WEBIDL#idl-object">object</a>.
+              "WEBIDL#dfn-convert-ecmascript-to-idl-value">convert</a> to
+              <a data-cite="WEBIDL#idl-object">object</a>.
               </li>
-              <li>If conversion results in an error, reject <var>promise</var>
-              with that error and terminate this algorithm.
-              </li>
-              <li>If the user agent has a registered <a>payment handler</a>
-              that supports <var>identifier</var>, then check if the payment
-              handler is authorized and capable of handling the payment request
-              with <var>data</var>. If the check returns in the affirmative,
-              then resolve <var>promise</var> with true, and abort this
+              <li>If conversion results in an <a data-cite=
+              "WEBIDL#dfn-exception">exception</a> <var>error</var>, reject
+              <var>promise</var> with <var>error</var> and terminate this
               algorithm.
+              </li>
+              <li>Let <var>handlers</var> be a <a>list</a> of registered
+              <a>payment handlers</a> that are authorized and can handle
+              payment request for <var>identifier</var>.
+              </li>
+              <li>For each <var>handler</var> in <var>handlers</var>:
+                <ol>
+                  <li>Let <var>canMakePayment</var> be the result of running
+                  <var>handler</var>'s <a>steps to check if a payment can be
+                  made</a> with <var>data</var>.
+                  </li>
+                  <li>If <var>canMakePayment</var> is true, resolve
+                  <var>promise</var> with true, and return.
+                  </li>
+                </ol>
               </li>
             </ol>
           </li>
@@ -1183,6 +1301,16 @@
       </section>
       <section data-dfn-for="PaymentRequest" data-link-for="PaymentRequest">
         <h2>
+          <dfn>onmerchantvalidation</dfn> attribute
+        </h2>
+        <p data-tests="onmerchantvalidation-attribute.https.html">
+          A <a>PaymentRequest</a>'s <a>onmerchantvalidation</a> attribute is an
+          <a>EventHandler</a> for a <a>MerchantValidationEvent</a> named
+          "<a>merchantvalidation</a>".
+        </p>
+      </section>
+      <section data-dfn-for="PaymentRequest" data-link-for="PaymentRequest">
+        <h2>
           <dfn>onshippingaddresschange</dfn> attribute
         </h2>
         <p data-tests=
@@ -1213,6 +1341,16 @@
           A <a>PaymentRequest</a>'s <a>onshippingoptionchange</a> attribute is
           an <a>EventHandler</a> for a <a>PaymentRequestUpdateEvent</a> named
           <a>shippingoptionchange</a>.
+        </p>
+      </section>
+      <section data-dfn-for="PaymentRequest" data-link-for="PaymentRequest">
+        <h2>
+          <dfn>onpaymentmethodchange</dfn> attribute
+        </h2>
+        <p data-tests="onpaymentmenthodchange-attribute.https.html">
+          A <a>PaymentRequest</a>'s <a>onpaymentmethodchange</a> attribute is
+          an <a>EventHandler</a> for a <a>PaymentMethodChangeEvent</a> named
+          "<a>paymentmethodchange</a>".
         </p>
       </section>
       <section>
@@ -1348,6 +1486,15 @@
               accepts the payment request.
             </td>
           </tr>
+          <tr>
+            <td>
+              <dfn>[[\response]]</dfn>
+            </td>
+            <td>
+              Null, or the <a>PaymentResponse</a> instantiated by this
+              <a>PaymentRequest</a>.
+            </td>
+          </tr>
         </table>
       </section>
     </section>
@@ -1399,56 +1546,63 @@
         dictionary PaymentCurrencyAmount {
           required DOMString currency;
           required DOMString value;
-          // Note: currencySystem is "at risk" of being removed!
-          DOMString currencySystem = "urn:iso:std:iso:4217";
         };
       </pre>
       <p>
         A <a>PaymentCurrencyAmount</a> dictionary is used to supply monetary
         amounts.
       </p>
-      <div class="issue atrisk">
-        <p>
-          This feature has been marked "<a>at risk</a>". If you'd like for this
-          feature to remain in the specification, please describe your use case
-          in <a href="https://github.com/w3c/payment-request/issues/490">issue
-          490</a>.
-        </p>
-        <dl>
-          <dt>
-            <dfn>currencySystem</dfn> member
-          </dt>
-          <dd>
-            A URL that indicates the currency system that the <a>currency</a>
-            identifier belongs to. By default, the value is
-            "<code>urn:iso:std:iso:4217</code>" indicating that <a>currency</a>
-            is defined by [[!ISO4217]] (for example, <code>USD</code> for US
-            Dollars).
-          </dd>
-        </dl>
-      </div>
       <dl>
         <dt>
           <dfn>currency</dfn> member
         </dt>
         <dd>
           <p>
-            A string containing a currency identifier. The value of
-            <a>currency</a> can be any string that is valid within the currency
-            system indicated by <a>currencySystem</a>.
+            A [[ISO4217]] <a data-cite=
+            "ecma-402#sec-iswellformedcurrencycode">well-formed</a> 3-letter
+            alphabetic code (i.e., the numeric codes are not supported). Their
+            canonical form is upper case. However, the set of combinations of
+            currency code for which localized currency symbols are available is
+            implementation dependent. Where a localized currency symbol is not
+            available, a user agent SHOULD use U+00A4 (¤) for formatting. User
+            agents MAY format the display of the <a>currency</a> member to
+            adhere to OS conventions (e.g., for localization purposes).
           </p>
-          <p>
-            When using [[!ISO4217]], all <a data-cite=
-            "!ecma-402#sec-iswellformedcurrencycode">well-formed</a> 3-letter
-            alphabetic codes are allowed (i.e., the numeric codes are not
-            supported). Their canonical form is upper case. However, the set of
-            combinations of currency code for which localized currency symbols
-            are available is implementation dependent. Where a localized
-            currency symbol is not available, a user agent SHOULD use U+00A4
-            (¤) for formatting. User agents MAY format the display of the
-            <a>currency</a> member to adhere to OS conventions (e.g., for
-            localization purposes).
-          </p>
+          <div class="note" title=
+          "Digital currencies and ISO 4217 currency codes">
+            <p>
+              User agents implementing this specification enforce [[ISO4217]]'s
+              3-letter codes format via ECMAScript’s <a data-cite=
+              "ecma-402#sec-iswellformedcurrencycode">isWellFormedCurrencyCode</a>
+              abstract operation, which is invoked as part of the <a>check and
+              canonicalize amount</a> algorithm. When a code does not adhere to
+              the [[ISO4217]] defined format, a <a>RangeError</a> is thrown.
+            </p>
+            <p>
+              Current implementations will therefore allow the use of
+              well-formed currency codes that are not part of the official
+              [[ISO4217]] list (e.g., XBT, XRP, etc.). If the provided code is
+              a currency that the browser knows how to display, then an
+              implementation will generally display the appropriate currency
+              symbol in the user interface (e.g., "USD" is shown as "$", "GBP"
+              is "£", and the non-standard "XBT" could be shown as "Ƀ"). When a
+              code cannot be matched, the specification recommends browsers
+              show a scarab "¤".
+            </p>
+            <p>
+              Efforts are underway at ISO to account for digital currencies,
+              which may result in an update to the [[ISO4217]] registry or an
+              entirely new registry. The community expects this will resolve
+              ambiguities that have crept in through the use of non-standard
+              3-letter codes; for example, does "BTC" refer to Bitcoin or to a
+              future Bhutan currency? At the time of publication, it remains
+              unclear what form this evolution will take, or even the time
+              frame in which the work will be completed. The W3C Web Payments
+              Working Group is liaising with ISO so that, in the future,
+              revisions to this specification remain compatible with relevant
+              ISO registries.
+            </p>
+          </div>
         </dd>
         <dt>
           <dfn>value</dfn> member
@@ -1463,7 +1617,7 @@
       <pre class="example js">
         {
           "currency": "USD",
-          "value" : "55.00"
+          "value": "55.00"
         }
       </pre>
       <section>
@@ -1473,8 +1627,7 @@
         <p>
           A <dfn data-cite="INFRA#javascript-string">JavaScript string</dfn> is
           a <dfn>valid decimal monetary value</dfn> if it consists of the
-          following <dfn data-lt="code point" data-cite="INFRA#code-point">code
-          points</dfn> in the given order: [[!INFRA]]
+          following <a>code points</a> in the given order:
         </p>
         <ol>
           <li>Optionally, a single U+002D (-), to indicate that the amount is
@@ -1498,19 +1651,9 @@
           steps:
         </p>
         <ol data-link-for="PaymentCurrencyAmount">
-          <li data-tests=
-          "PaymentCurrencyAmount/currencySystem-member.https.html">If
-          <var>amount</var>.<a>currencySystem</a> is not
-          "<code>urn:iso:std:iso:4217</code>", throw a <a>TypeError</a>.
-          </li>
-          <li>Let <var>isValidCurrency</var> be the result of calling
-          <a data-cite=
-          "!ecma-402#sec-iswellformedcurrencycode">IsWellFormedCurrencyCode</a>
-          abstract operation with <var>amount</var>.<a>currency</a> as the
-          argument.
-          </li>
-          <li>If <var>isValidCurrency</var> is false, then throw a
-          <a>RangeError</a> exception and terminate this algorithm, optionally
+          <li>If the result of <a data-cite=
+          "ecma-402#sec-iswellformedcurrencycode">IsWellFormedCurrencyCode</a>(<var>amount</var>.<a>currency</a>)
+          is false, then throw a <a>RangeError</a> exception, optionally
           informing the developer that the currency is invalid.
           </li>
           <li>If <var>amount</var>.<a>value</a> is not a <a>valid decimal
@@ -1518,26 +1661,23 @@
           the developer that the currency is invalid.
           </li>
           <li>Set <var>amount</var>.<a>currency</a> to the result of
-          <a data-cite="!INFRA#ascii-uppercase">ASCII uppercasing</a>
+          <a data-cite="INFRA#ascii-uppercase">ASCII uppercasing</a>
           <var>amount</var>.<a>currency</a>.
           </li>
         </ol>
         <p>
-          To <dfn>check and canonicalize total</dfn> given a
-          <a>PaymentCurrencyAmount</a> <var>total</var>, run the following
+          To <dfn>check and canonicalize total amount</dfn> given a
+          <a>PaymentCurrencyAmount</a> <var>amount</var>, run the following
           steps:
         </p>
         <ol data-link-for="PaymentCurrencyAmount">
-          <li>If <var>total</var>.<a>currencySystem</a> is not
-          "<code>urn:iso:std:iso:4217</code>", terminate this algorithm.
-          </li>
           <li>
             <a>Check and canonicalize amount</a> <var>amount</var>. Rethrow any
             exceptions.
           </li>
-          <li>If the first <a>code point</a> of <var>value</var> is U+002D (-),
-          then throw a <a>TypeError</a> optionally informing the developer that
-          a total can't be a negative number.
+          <li>If the first <a>code point</a> of <var>amount</var>.<a>value</a>
+          is U+002D (-), then throw a <a>TypeError</a> optionally informing the
+          developer that a total's value can't be a negative number.
           </li>
         </ol>
         <aside class="note" title="No alteration of values">
@@ -1574,9 +1714,10 @@
             A sequence of <a>PaymentItem</a> dictionaries contains line items
             for the payment request that the <a>user agent</a> MAY display.
             <aside class="note">
-              It is the developer's responsibility to verify that the
-              <a data-lt="PaymentDetailsInit.total">total</a> amount is the sum
-              of these items.
+              It is the developer's responsibility, when generating or updating
+              a <a>PaymentRequest</a>, to verify that the <a data-lt=
+              "PaymentDetailsInit.total">total</a> amount is the sum of these
+              items.
             </aside>
           </dd>
           <dt>
@@ -1603,8 +1744,8 @@
             <p>
               The <a>shippingOptions</a> member is only used if the
               <a>PaymentRequest</a> was constructed with <a>PaymentOptions</a>
-              <a data-lt="PaymentOptions.requestShipping">requestShipping</a>
-              set to true.
+              and <a data-lt=
+              "PaymentOptions.requestShipping">requestShipping</a> set to true.
             </p>
             <aside class="note">
               If the sequence has an item with the <a data-lt=
@@ -1684,6 +1825,9 @@
           dictionary PaymentDetailsUpdate : PaymentDetailsBase {
             DOMString error;
             PaymentItem total;
+            AddressErrors shippingAddressErrors;
+            PayerErrors payerErrors;
+            object paymentMethodErrors;
           };
         </pre>
         <p>
@@ -1725,6 +1869,30 @@
               <a>total</a>.<a data-lt=
               "PaymentItem.amount">amount</a>.<a data-lt=
               "PaymentCurrencyAmount.value">value</a> is a negative number.
+            </p>
+          </dd>
+          <dt>
+            <dfn>shippingAddressErrors</dfn> member
+          </dt>
+          <dd>
+            Represents validation errors with the shipping address that is
+            associated with the <a data-cite="DOM#event-target">event
+            target</a>.
+          </dd>
+          <dt>
+            <dfn>payerErrors</dfn> member
+          </dt>
+          <dd>
+            Validation errors related to the <a>payer details</a>.
+          </dd>
+          <dt>
+            <dfn>paymentMethodErrors</dfn> member
+          </dt>
+          <dd>
+            <p>
+              <a>Payment method</a> specific errors. See, for example,
+              [[payment-method-basic-card]]'s <a data-cite=
+              "payment-method-basic-card#basiccarderrors-dictionary"><code>BasicCardErrors</code></a>.
             </p>
           </dd>
         </dl>
@@ -2011,7 +2179,7 @@
         Physical addresses
       </h2>
       <p>
-        A <dfn>physical address</dfn> is composed of the following concepts.
+        A <dfn>physical address</dfn> is composed of the following parts.
       </p>
       <dl data-sort="">
         <dt>
@@ -2049,7 +2217,7 @@
           neighborhoods, boroughs, districts, or UK dependent localities.
         </dd>
         <dt>
-          <dfn data-lt="Postal codes">Postal code</dfn>
+          <dfn>Postal code</dfn>
         </dt>
         <dd>
           The postal code or ZIP code, also known as PIN code in India.
@@ -2098,12 +2266,14 @@
             readonly attribute DOMString city;
             readonly attribute DOMString country;
             readonly attribute DOMString dependentLocality;
+            // "languageCode" is a feature at risk
             readonly attribute DOMString languageCode;
             readonly attribute DOMString organization;
             readonly attribute DOMString phone;
             readonly attribute DOMString postalCode;
             readonly attribute DOMString recipient;
             readonly attribute DOMString region;
+            readonly attribute DOMString regionCode;
             readonly attribute DOMString sortingCode;
             readonly attribute FrozenArray&lt;DOMString&gt; addressLine;
           };
@@ -2140,18 +2310,96 @@
             <li>If <var>details</var> was not passed, return
             <var>address</var>.
             </li>
-            <li>If <var>details</var>["<a>country</a>"] is present:
+            <li>If <var>details</var>["<a>country</a>"] is present and not the
+            empty string:
               <ol>
                 <li>Set <var>country</var> the result of <a>strip leading and
                 trailing ASCII whitespace</a> from
                 <var>details</var>["<a>country</a>"] and performing
-                <a data-cite="!INFRA#ascii-uppercase">ASCII uppercasing</a>.
+                <a data-cite="INFRA#ascii-uppercase">ASCII uppercasing</a>.
                 </li>
-                <li>If <var>country</var> is not a valid [[!ISO3166-1]] alpha-2
+                <li>If <var>country</var> is not a valid [[ISO3166-1]] alpha-2
                 code, throw a <a>RangeError</a> exception.
                 </li>
                 <li>Set <var>address</var>.<a>[[\country]]</a> to
                 <var>country</var>.
+                </li>
+              </ol>
+            </li>
+            <li>If <var>details</var>["<a>regionCode</a>"] is present and not
+            the empty string:
+              <ol>
+                <li>Let <var>regionCode</var> be the result of <a>strip leading
+                and trailing ASCII whitespace</a> from
+                <var>details</var>["<a>regionCode</a>"] and then
+                  <a data-cite="INFRA#ascii-uppercase">ASCII uppercasing</a>
+                  the result.
+                </li>
+                <li>Let <var>putativeCountrySubdivisionCodeElement</var> be the
+                concatenation of <var>address</var>.<a>[[\country]]</a>, a
+                single U+002D (-) <a>code point</a>, and <var>regionCode</var>.
+                </li>
+                <li>
+                  <p>
+                    If <var>putativeCountrySubdivisionCodeElement</var> is not
+                    a valid <a>country subdivision code element</a> as per
+                    [[ISO3166-2]]'s section 5.2 "Structure of country
+                    subdivision code elements" (non-normative details below),
+                    throw a <a>RangeError</a> exception.
+                  </p>
+                  <div class="note" title=
+                  "Structure of country subdivision code elements">
+                    <p>
+                      <strong>Do not implement from this note.</strong> The
+                      structure of a <a>country subdivision code element</a> is
+                      formally defined in [[ISO3166-2]] (section 5.2). Although
+                      the structure is not expected to change at the time of
+                      writing, implementers are expected to track updates to
+                      [[ISO3166-2]] directly from ISO.
+                    </p>
+                    <p>
+                      As [[ISO3166-2]] is not freely available to the general
+                      public, the structure of a <a>country subdivision code
+                      element</a> at the time of publication is as follows:
+                    </p>
+                    <ul>
+                      <li>Two <a>code points</a> that match an [[ISO3166-1]]
+                      alpha-2 country code.
+                      </li>
+                      <li>A single U+002D (-) <a>code point</a>.
+                      </li>
+                      <li>One, two, or three <a data-cite=
+                      "INFRA#ascii-alphanumeric">ASCII alphanumeric</a> code
+                      points, in any order.
+                      </li>
+                    </ul>
+                  </div>
+                </li>
+                <li>Set <var>address</var>.<a>[[\regionCode]]</a> to
+                <var>regionCode</var>.
+                </li>
+                <li>If <var>details</var>["<a>region</a>"] is not present:
+                  <ol>
+                    <li>Let <var>region</var> be the corresponding <a>country
+                    subdivision name</a> for <var>regionCode</var>. Where
+                    [[ISO3166-2]] defines multiple <a>country subdivision
+                    names</a> for a <var>regionCode</var>, it is RECOMMENDED
+                    the user agent select one by matching on:
+                      <ol>
+                        <li>The <a data-cite="HTML#language">language</a> of
+                        <a data-cite="HTML#the-body-element-2">the body
+                        element</a>.
+                        </li>
+                        <li>The user's preferred languages.
+                        </li>
+                        <li>Any other criteria the user agent deems suitable.
+                        </li>
+                      </ol>
+                    </li>
+                    <li>Set <var>details</var>["<a>region</a>"] to
+                    <var>region</var>.
+                    </li>
+                  </ol>
                 </li>
               </ol>
             </li>
@@ -2238,7 +2486,7 @@
             <dfn>toJSON()</dfn> method
           </h2>
           <p>
-            When called, runs [[!WEBIDL]]'s <a data-cite=
+            When called, runs [[WEBIDL]]'s <a data-cite=
             "WEBIDL#default-tojson-operation">default toJSON operation</a>.
           </p>
         </section>
@@ -2270,6 +2518,17 @@
             Represents the <a>region</a> of the address. When getting, returns
             the value of the <a>PaymentAddress</a>'s <a>[[\region]]</a>
             internal slot.
+          </p>
+        </section>
+        <section>
+          <h2>
+            <dfn>regionCode</dfn> attribute
+          </h2>
+          <p data-link-for="">
+            Represents the <a>region</a> of the address as a code element of an
+            [[ISO3166-2]] country subdivision name (e.g., "CA" for California,
+            USA). When getting, returns the value of the
+            <a>PaymentAddress</a>'s <a>[[\regionCode]]</a> internal slot.
           </p>
         </section>
         <section>
@@ -2316,6 +2575,12 @@
           <h2>
             <dfn>languageCode</dfn> attribute
           </h2>
+          <p class="issue atrisk">
+            This feature has been marked "<a>at risk</a>". If you'd like for
+            this feature to remain in the specification, please signal your
+            support for it to remain in <a href=
+            "https://github.com/w3c/payment-request/issues/608">issue 608</a>.
+          </p>
           <p>
             Represents the <a>language code</a> of the address. When getting,
             returns the value of the <a>PaymentAddress</a>'s
@@ -2371,8 +2636,8 @@
                 <dfn>[[\country]]</dfn>
               </td>
               <td>
-                A <a>country</a> as an [[!ISO3166-1]] alpha-2 code stored in
-                its canonical uppercase form or the empty string. For example,
+                A <a>country</a> as an [[ISO3166-1]] alpha-2 code stored in its
+                canonical uppercase form or the empty string. For example,
                 "JP".
               </td>
             </tr>
@@ -2390,9 +2655,22 @@
                 <dfn>[[\region]]</dfn>
               </td>
               <td>
-                A <a>region</a> as a country subdivision name or the empty
-                string, such as "Victoria", representing the state of Victoria
-                in Australia.
+                A <a>region</a> as a <a>country subdivision name</a> or the
+                empty string, such as "Victoria", representing the state of
+                Victoria in Australia.
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <dfn>[[\regionCode]]</dfn>
+              </td>
+              <td>
+                The empty string, or one to three code points that represent a
+                <a>region</a> as the code element of an [[ISO3166-2]] country
+                subdivision name (i.e., the characters after the hyphen in an
+                ISO3166-2 <a>country subdivision code element</a>, such as "CA"
+                for the state of California in the USA, or "11" for the Lisbon
+                district of Portugal).
               </td>
             </tr>
             <tr>
@@ -2432,8 +2710,14 @@
                 <dfn>[[\languageCode]]</dfn>
               </td>
               <td>
-                A <a data-cite="!BCP47#section-2">language tag</a> representing
-                the <a>language code</a>, or the empty string.
+                <p class="issue atrisk">
+                  This feature has been marked "<a>at risk</a>". If you'd like
+                  for this feature to remain in the specification, please
+                  signal your support for it to remain in <a href=
+                  "https://github.com/w3c/payment-request/issues/608">issue
+                  608</a>.
+                </p>A <a data-cite="BCP47#section-2">language tag</a>
+                representing the <a>language code</a>, or the empty string.
               </td>
             </tr>
             <tr>
@@ -2472,6 +2756,7 @@
             DOMString country;
             sequence&lt;DOMString&gt; addressLine;
             DOMString region;
+            DOMString regionCode;
             DOMString city;
             DOMString dependentLocality;
             DOMString postalCode;
@@ -2492,7 +2777,7 @@
             <dfn>country</dfn> member
           </dt>
           <dd>
-            An <a>country</a>, represented as a [[!ISO3166-1]] country code.
+            An <a>country</a>, represented as a [[ISO3166-1]] country code.
           </dd>
           <dt>
             <dfn>addressLine</dfn> member
@@ -2505,6 +2790,17 @@
           </dt>
           <dd>
             A <a>region</a>.
+          </dd>
+          <dt>
+            <dfn>regionCode</dfn> member
+          </dt>
+          <dd>
+            The empty string, or one to three code points that represent a
+            <a>region</a> as the code element of an [[ISO3166-2]] country
+            subdivision name (i.e., the characters after the hyphen in an
+            ISO3166-2 <a>country subdivision code element</a>, such as "CA" for
+            the state of California in the USA, or "11" for the Lisbon district
+            of Portugal).
           </dd>
           <dt>
             <dfn>city</dfn> member
@@ -2534,8 +2830,17 @@
             <dfn>languageCode</dfn> member
           </dt>
           <dd>
-            A <a>language code</a>, represented as a <a data-cite=
-            "!BCP47#section-2">language tag</a>.
+            <p class="issue atrisk">
+              This feature has been marked "<a>at risk</a>". If you'd like for
+              this feature to remain in the specification, please signal your
+              support for it to remain in <a href=
+              "https://github.com/w3c/payment-request/issues/608">issue
+              608</a>.
+            </p>
+            <p>
+              A <a>language code</a>, represented as a <a data-cite=
+              "BCP47#section-2">language tag</a>.
+            </p>
           </dd>
           <dt>
             <dfn>organization</dfn> member
@@ -2556,7 +2861,154 @@
           </dt>
           <dd>
             A <a>phone number</a>, optionally structured to adhere to
-            [[!E.164]].
+            [[E.164]].
+          </dd>
+        </dl>
+      </section>
+      <section data-dfn-for="AddressErrors" data-link-for="AddressErrors">
+        <h2>
+          <dfn>AddressErrors</dfn> dictionary
+        </h2>
+        <pre class="idl">
+          dictionary AddressErrors {
+            DOMString addressLine;
+            DOMString city;
+            DOMString country;
+            DOMString dependentLocality;
+            DOMString languageCode;
+            DOMString organization;
+            DOMString phone;
+            DOMString postalCode;
+            DOMString recipient;
+            DOMString region;
+            DOMString regionCode;
+            DOMString sortingCode;
+          };
+        </pre>
+        <p>
+          The members of the <a>AddressErrors</a> dictionary represent
+          validation errors with specific parts of a <a>physical address</a>.
+          Each dictionary member has a dual function: firstly, its presence
+          denotes that a particular part of an address is suffering from a
+          validation error. Secondly, the string value allows the developer to
+          describe the validation error (and possibly how the end user can fix
+          the error).
+        </p>
+        <p class="note">
+          Developers need to be aware that users might not have the ability to
+          fix certain parts of an address. As such, they need to be mindful to
+          not to ask the user to fix things they might not have control over
+          (e.g., <a>languageCode</a>).
+        </p>
+        <dl>
+          <dt>
+            <dfn>addressLine</dfn> member
+          </dt>
+          <dd>
+            Denotes that the <a>address line</a> has a validation error. In the
+            user agent's UI, this member corresponds to the input field that
+            provided the <a>PaymentAddress</a>'s <a data-link-for=
+            "PaymentAddress">addressLine</a> attribute's value.
+          </dd>
+          <dt>
+            <dfn>city</dfn> member
+          </dt>
+          <dd>
+            Denotes that the <a>city</a> has a validation error. In the user
+            agent's UI, this member corresponds to the input field that
+            provided the <a>PaymentAddress</a>'s <a data-link-for=
+            "PaymentAddress">city</a> attribute's value.
+          </dd>
+          <dt>
+            <dfn>country</dfn> member
+          </dt>
+          <dd>
+            Denotes that the <a>country</a> has a validation error. In the user
+            agent's UI, this member corresponds to the input field that
+            provided the <a>PaymentAddress</a>'s <a data-link-for=
+            "PaymentAddress">country</a> attribute's value.
+          </dd>
+          <dt>
+            <dfn>dependentLocality</dfn> member
+          </dt>
+          <dd>
+            Denotes that the <a>dependent locality</a> has a validation error.
+            In the user agent's UI, this member corresponds to the input field
+            that provided the <a>PaymentAddress</a>'s <a data-link-for=
+            "PaymentAddress">dependentLocality</a> attribute's value.
+          </dd>
+          <dt>
+            <dfn>languageCode</dfn> member
+          </dt>
+          <dd>
+            Denotes that the <a>language code</a> has a validation error. In
+            the user agent's UI, this member corresponds to the input field
+            that provided the <a>PaymentAddress</a>'s <a data-link-for=
+            "PaymentAddress">languageCode</a> attribute's value.
+          </dd>
+          <dt>
+            <dfn>organization</dfn> member
+          </dt>
+          <dd>
+            Denotes that the <a>organization</a> has a validation error. In the
+            user agent's UI, this member corresponds to the input field that
+            provided the <a>PaymentAddress</a>'s <a data-link-for=
+            "PaymentAddress">organization</a> attribute's value.
+          </dd>
+          <dt>
+            <dfn>phone</dfn> member
+          </dt>
+          <dd>
+            Denotes that the <a>phone number</a> has a validation error. In the
+            user agent's UI, this member corresponds to the input field that
+            provided the <a>PaymentAddress</a>'s <a data-link-for=
+            "PaymentAddress">phone</a> attribute's value.
+          </dd>
+          <dt>
+            <dfn>postalCode</dfn> member
+          </dt>
+          <dd>
+            Denotes that the <a>postal code</a> has a validation error. In the
+            user agent's UI, this member corresponds to the input field that
+            provided the <a>PaymentAddress</a>'s <a data-link-for=
+            "PaymentAddress">postalCode</a> attribute's value.
+          </dd>
+          <dt>
+            <dfn>recipient</dfn> member
+          </dt>
+          <dd>
+            Denotes that the <a>recipient</a> has a validation error. In the
+            user agent's UI, this member corresponds to the input field that
+            provided the <a>PaymentAddress</a>'s <a data-link-for=
+            "PaymentAddress">addressLine</a> attribute's value.
+          </dd>
+          <dt>
+            <dfn>region</dfn> member
+          </dt>
+          <dd>
+            Denotes that the <a>region</a> has a validation error. In the user
+            agent's UI, this member corresponds to the input field that
+            provided the <a>PaymentAddress</a>'s <a data-link-for=
+            "PaymentAddress">region</a> attribute's value.
+          </dd>
+          <dt>
+            <dfn>regionCode</dfn> member
+          </dt>
+          <dd>
+            Denotes that the region code representation of the <a>region</a>
+            has a validation error. In the user agent's UI, this member
+            corresponds to the input field that provided the
+            <a>PaymentAddress</a>'s <a data-link-for=
+            "PaymentAddress">regionCode</a> attribute's value.
+          </dd>
+          <dt>
+            <dfn>sortingCode</dfn> member
+          </dt>
+          <dd>
+            The <a>sorting code</a> has a validation error. In the user agent's
+            UI, this member corresponds to the input field that provided the
+            <a>PaymentAddress</a>'s <a data-link-for=
+            "PaymentAddress">sortingCode</a> attribute's value.
           </dd>
         </dl>
       </section>
@@ -2585,7 +3037,7 @@
           </li>
           <li>If "country" is not in <var>redactList</var>, set
           <var>details</var>["<a>country</a>"] to the user-provided country as
-          an upper case [[!ISO3166-1]] alpha-2 code, or to the empty string if
+          an upper case [[ISO3166-1]] alpha-2 code, or to the empty string if
           none was provided.
           </li>
           <li>If "phone" is not in <var>redactList</var>, set
@@ -2603,9 +3055,9 @@
           </li>
           <li>If "languageCode" is not in <var>redactList</var>, set
           <var>details</var>["<a>languageCode</a>"] to a <a data-cite=
-          "!BCP47#section-4.5">canonicalized language tag</a>, or to the empty
+          "BCP47#section-4.5">canonicalized language tag</a>, or to the empty
           string if none was provided.
-            <div class="issue" data-number="608"></div>
+            <div class="issue atrisk" data-number="608"></div>
           </li>
           <li>If "city" is not in <var>redactList</var>, set
           <var>details</var>["<a>city</a>"] to the user-provided city, or to
@@ -2640,9 +3092,34 @@
           <var>details</var>["<a>recipient</a>"] to the user-provided recipient
           of the transaction, or to the empty string if none was provided.
           </li>
-          <li>If "region" is not in <var>redactList</var>, set
-          <var>details</var>["<a>region</a>"] to the user-provided region, or
-          to the empty string if none was provided.
+          <li>
+            <p>
+              If "region" is not in <var>redactList</var>:
+            </p>
+            <p data-link-for="" class="note" title=
+            "Countries where regions are not commonly used">
+              In some countries (e.g., Belgium) it is uncommon for users to
+              include a <a>region</a> as part of a <a>physical address</a>
+              (even if all the regions of a country are part of [[ISO3166-2]]).
+              As such, when the user agent knows that the user is inputting the
+              address for a particular country, it might not provide a field
+              for the user to input a <a>region</a>. In such cases, the user
+              agent returns an empty string for both <a>PaymentAddress</a>'s
+              <a data-link-for="PaymentAddress">region</a> and
+              <a data-link-for="PaymentAddress">regionCode</a> attributes - but
+              the address can still serve its intended purpose (e.g., be valid
+              for shipping or billing purposes).
+            </p>
+            <ol>
+              <li>Set <var>details</var>["<a>region</a>"] to the user-provided
+              region, or to the empty string if none was provided.
+              </li>
+              <li>If <var>details</var>["<a>region</a>"] has a corresponding
+              <a>country subdivision code element</a>, set
+              <var>details</var>["<a>regionCode</a>"] to that <a>country
+              subdivision code element</a>.
+              </li>
+            </ol>
           </li>
           <li>If "sortingCode" is not in <var>redactList</var>, set
           <var>details</var>["<a>sortingCode</a>"] to the user-provided sorting
@@ -2750,7 +3227,7 @@
       </h2>
       <pre class="idl">
         [SecureContext, Exposed=Window]
-        interface PaymentResponse {
+        interface PaymentResponse : EventTarget  {
           [Default] object toJSON();
 
           readonly attribute DOMString requestId;
@@ -2762,7 +3239,12 @@
           readonly attribute DOMString? payerEmail;
           readonly attribute DOMString? payerPhone;
 
+          [NewObject]
           Promise&lt;void&gt; complete(optional PaymentComplete result = "unknown");
+          [NewObject]
+          Promise&lt;void&gt; retry(PaymentValidationErrors errorFields);
+
+          attribute EventHandler onpayerdetailchange;
         };
       </pre>
       <p class="note">
@@ -2771,10 +3253,215 @@
       </p>
       <section>
         <h2>
+          <dfn>retry()</dfn> method
+        </h2>
+        <p data-tests="payment-response/retry-method-manual.https.html">
+          The <code>retry(<var>errorFields</var>)</code> method MUST act as
+          follows:
+        </p>
+        <ol class="algorithm">
+          <li>Let <var>response</var> be the <a>context object</a>.
+          </li>
+          <li>Let <var>request</var> be
+          <var>response</var>.<a>[[\request]]</a>.
+          </li>
+          <li>Let <var>document</var> be <var>request</var>'s <a data-cite=
+          "HTML#concept-relevant-global">relevant global object</a>'s
+          <a data-cite="HTML#concept-document-window">associated Document</a>.
+          </li>
+          <li data-tests=
+          "payment-response/rejects_if_not_active-manual.https.html">If
+          <var>document</var> is not <a data-cite="HTML#fully-active">fully
+          active</a>, then return <a>a promise rejected with</a> an
+          "<a>AbortError</a>" <a>DOMException</a>.
+          </li>
+          <li>If <var>response</var>.<a>[[\complete]]</a> is true, return <a>a
+          promise rejected with</a> an "<a>InvalidStateError</a>"
+          <a>DOMException</a>.
+          </li>
+          <li>If <var>response</var>.<a>[[\retryPromise]]</a> is not null,
+          return <a>a promise rejected with</a> an "<a>InvalidStateError</a>"
+          <a>DOMException</a>.
+          </li>
+          <li>Set <var>request</var>.<a>[[\state]]</a> to "<a>interactive</a>".
+          </li>
+          <li>Let <var>retryPromise</var> be <a>a new promise</a>.
+          </li>
+          <li>Set <var>response</var>.<a>[[\retryPromise]]</a> to
+          <var>retryPromise</var>.
+          </li>
+          <li data-link-for="PaymentValidationErrors" data-tests=
+          "PaymentValidationErrors/retry-shows-error-member-manual.https.html">
+          If <var>errorFields</var>'s <a>paymentMethod</a> member was passed,
+          and if required by the specification that defines
+          <var>response</var>'s <a>payment method</a>, then <a data-cite=
+          "WEBIDL#dfn-convert-ecmascript-to-idl-value">convert</a>
+          <var>errorFields</var> <a>paymentMethod</a> to an IDL value of the
+          type specified there. Otherwise, <a data-cite=
+          "WEBIDL#dfn-convert-ecmascript-to-idl-value">convert</a> to
+          <a data-cite="WEBIDL#idl-object">object</a>.
+          </li>
+          <li>If conversion results in a <a data-cite=
+          "WEBIDL#dfn-exception">exception</a> <var>error</var>:
+            <ol>
+              <li>Reject <var>retryPromise</var> with <var>error</var>.
+              </li>
+              <li>Set <a>user agent</a>'s <a>payment request is showing</a>
+              boolean to false.
+              </li>
+              <li>Return.
+              </li>
+            </ol>
+          </li>
+          <li data-link-for="PaymentValidationErrors">By matching the members
+          of <var>errorFields</var> to input fields in the user agent's UI,
+          indicate to the end-user that something is wrong with the data of the
+          payment response. For example, a user agent might draw the user's
+          attention to the erroneous <var>errorFields</var> in the browser's UI
+          and display the value of each field in a manner that helps the user
+          fix each error. Similarly, if the <a>error</a> member is passed,
+          present the error in the user agent's UI.
+          </li>
+          <li data-tests=
+          "payment-response/rejects_if_not_active-manual.https.html">If
+          <var>document</var> stops being <a data-cite=
+          "HTML#fully-active">fully active</a> while the user interface is
+          being shown, or no longer is by the time this step is reached, then:
+            <ol>
+              <li>Close down the user interface.
+              </li>
+              <li>Set the <a>user agent</a>'s <a>payment request is showing</a>
+              boolean to false.
+              </li>
+              <li>Reject <var>retryPromise</var> with an "<a>AbortError</a>"
+              <a>DOMException</a>.
+              </li>
+            </ol>
+          </li>
+          <li>Finally, when <var>retryPromise</var> settles, set
+          <var>response</var>.<a>[[\retryPromise]]</a> to null.
+          </li>
+          <li>Return <var>retryPromise</var>.
+            <p class="note">
+              The <var>retryPromise</var> will later be resolved by the <a>user
+              accepts the payment request algorithm</a>, or rejected by either
+              the <a>user aborts the payment request algorithm</a> or <a>abort
+              the update</a>.
+            </p>
+          </li>
+        </ol>
+        <section data-dfn-for="PaymentValidationErrors" data-link-for=
+        "PaymentValidationErrors">
+          <h3>
+            <dfn>PaymentValidationErrors</dfn> dictionary
+          </h3>
+          <pre class="idl">
+            dictionary PaymentValidationErrors {
+              PayerErrors payer;
+              AddressErrors shippingAddress;
+              DOMString error;
+              object paymentMethod;
+            };
+          </pre>
+          <dl>
+            <dt>
+              <dfn>payer</dfn> member
+            </dt>
+            <dd>
+              Validation errors related to the <a>payer details</a>.
+            </dd>
+            <dt>
+              <dfn>shippingAddress</dfn> member
+            </dt>
+            <dd data-link-for="PaymentResponse">
+              Represents validation errors with the <a>PaymentResponse</a>'s
+              <a>shippingAddress</a>.
+            </dd>
+            <dt>
+              <dfn>error</dfn> member
+            </dt>
+            <dd>
+              A general description of an error with the payment from which the
+              user can attempt to recover from by, for example, retrying a
+              payment. A developer can optionally pass the <a>error</a> member
+              on its own to give a general overview of validation issues, or it
+              can be passed in combination with other members of the
+              <a>PaymentValidationErrors</a> dictionary.
+            </dd>
+            <dt>
+              <dfn>paymentMethod</dfn> member
+            </dt>
+            <dd>
+              A payment method specific errors. See, for example,
+              [[payment-method-basic-card]]'s <a data-cite=
+              "payment-method-basic-card#basiccarderrors-dictionary"><code>BasicCardErrors</code></a>.
+            </dd>
+          </dl>
+        </section>
+        <section data-dfn-for="PayerErrors" data-link-for="PayerErrors">
+          <h3>
+            <dfn>PayerErrors</dfn> dictionary
+          </h3>
+          <pre class="idl">
+          dictionary PayerErrors {
+            DOMString email;
+            DOMString name;
+            DOMString phone;
+          };
+          </pre>
+          <p>
+            The <a>PayerErrors</a> is used to represent validation errors with
+            one or more <a>payer details</a>.
+          </p>
+          <p>
+            <dfn>Payer details</dfn> are any of the payer's name, payer's phone
+            number, and payer's email.
+          </p>
+          <dl data-link-for="PaymentResponse">
+            <dt>
+              <dfn>email</dfn> member
+            </dt>
+            <dd>
+              Denotes that the payer's email suffers from a validation error.
+              In the user agent's UI, this member corresponds to the input
+              field that provided the <a>PaymentResponse</a>'s
+              <a>payerEmail</a> attribute's value.
+            </dd>
+            <dt>
+              <dfn>name</dfn> member
+            </dt>
+            <dd>
+              Denotes that the payer's name suffers from a validation error. In
+              the user agent's UI, this member corresponds to the input field
+              that provided the <a>PaymentResponse</a>'s <a>payerName</a>
+              attribute's value.
+            </dd>
+            <dt>
+              <dfn>phone</dfn> member
+            </dt>
+            <dd>
+              Denotes that the payer's phone number suffers from a validation
+              error. In the user agent's UI, this member corresponds to the
+              input field that provided the <a>PaymentResponse</a>'s
+              <a>payerPhone</a> attribute's value.
+            </dd>
+          </dl>
+          <pre class="example js" title="Payer-related validation errors">
+          const payer = {
+            email: "The domain is invalid.",
+            phone: "Unknown country code.",
+            name: "Not in database.",
+          };
+          await response.retry({ payer });
+          </pre>
+        </section>
+      </section>
+      <section>
+        <h2>
           <dfn>toJSON()</dfn> method
         </h2>
         <p>
-          When called, runs [[!WEBIDL]]'s <a data-cite=
+          When called, runs [[WEBIDL]]'s <a data-cite=
           "WEBIDL#default-tojson-operation">default toJSON operation</a>.
         </p>
       </section>
@@ -2793,8 +3480,8 @@
           <dfn>details</dfn> attribute
         </h2>
         <p>
-          An <a data-cite="!WEBIDL#idl-object">object</a> or <a data-cite=
-          "!WEBIDL#idl-dictionary">dictionary</a> generated by a <a>payment
+          An <a data-cite="WEBIDL#idl-object">object</a> or <a data-cite=
+          "WEBIDL#idl-dictionary">dictionary</a> generated by a <a>payment
           method</a> that a merchant can use to process or validate a
           transaction (depending on the <a>payment method</a>).
         </p>
@@ -2804,7 +3491,7 @@
             "payment-method-id#standardized-payment-method-identifiers">standardized
             payment method identifier</a>, such as <a data-cite=
             "payment-method-basic-card">Basic Card</a> ("basic-card"), defines
-            its own unique <a data-cite="!WEBIDL#idl-dictionary">IDL
+            its own unique <a data-cite="WEBIDL#idl-dictionary">IDL
             dictionary</a> for use with the <a>details</a> attribute. The shape
             of this data (i.e., its members and their corresponding types and
             formats) differs depending on which standardized payment method
@@ -2927,27 +3614,64 @@
           arguments.
         </p>
         <p data-tests="payment-response/complete-method-manual.https.html">
-          The <a>complete(result)</a> method MUST act as follows:
+          The <a><code>complete(<var>result</var>)</code></a> method MUST act
+          as follows:
         </p>
         <ol class="algorithm">
-          <li>Let <var>promise</var> be a new <a>Promise</a>.
+          <li>Let <var>response</var> be the <a>context object</a>.
           </li>
-          <li>If the value of the internal slot <a>[[\completeCalled]]</a> is
-          true, reject <var>promise</var> with an "<a>InvalidStateError</a>"
+          <li>If <var>response</var>.<a>[[\complete]]</a> is true, return <a>a
+          promise rejected with</a> an "<a>InvalidStateError</a>"
           <a>DOMException</a>.
           </li>
-          <li>Otherwise, set the value of the internal slot
-          <a>[[\completeCalled]]</a> to true.
+          <li>Let <var>promise</var> be <a>a new promise</a>.
+          </li>
+          <li>Set <var>response</var>.<a>[[\complete]]</a> to true.
+          </li>
+          <li data-tests="payment-response/retry-method-manual.https.html">If
+          <var>response</var>.<a>[[\retryPromise]]</a> is not null, reject
+          <var>promise</var> with an "<a>InvalidStateError</a>"
+          <a>DOMException</a>.
           </li>
           <li>Return <var>promise</var> and perform the remaining steps <a>in
           parallel</a>.
           </li>
-          <li>Close down any remaining user interface. The <a>user agent</a>
-          MAY use the value <var>result</var> to influence the user experience.
+          <li>If <var>document</var> stops being <a data-cite=
+          "HTML#fully-active">fully active</a> while the user interface is
+          being shown, or no longer is by the time this step is reached, then:
+            <ol>
+              <li>Close down the user interface.
+              </li>
+              <li>Set the <a>user agent</a>'s <a>payment request is showing</a>
+              boolean to false.
+              </li>
+              <li>Reject <var>promise</var> with an "<a>AbortError</a>"
+              <a>DOMException</a>.
+              </li>
+            </ol>
           </li>
-          <li>Resolve <var>promise</var> with undefined.
+          <li>Otherwise:
+            <ol>
+              <li>Close down any remaining user interface. The <a>user
+              agent</a> MAY use the value <var>result</var> to influence the
+              user experience.
+              </li>
+              <li>Set the <a>user agent</a>'s <a>payment request is showing</a>
+              boolean to false.
+              </li>
+              <li>Resolve <var>promise</var> with undefined.
+              </li>
+            </ol>
           </li>
         </ol>
+      </section>
+      <section data-dfn-for="PaymentResponse" data-link-for="PaymentResponse">
+        <h2>
+          <dfn>onpayerdetailchange</dfn> attribute
+        </h2>
+        <p>
+          Allows a developer to handle "<a>payerdetailchange</a>" events.
+        </p>
       </section>
       <section>
         <h2>
@@ -2968,11 +3692,31 @@
           </tr>
           <tr>
             <td>
-              <dfn>[[\completeCalled]]</dfn>
+              <dfn>[[\complete]]</dfn>
+            </td>
+            <td data-link-for="PaymentResponse">
+              Is true if the request for payment has completed (i.e.,
+              <a>complete()</a> was called, or there was a fatal error that
+              made the response not longer usable), or false otherwise.
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <dfn>[[\request]]</dfn>
             </td>
             <td>
-              true if the <a data-lt="PaymentResponse.complete">complete</a>
-              method has been called and false otherwise.
+              The <a>PaymentRequest</a> instance that instantiated this
+              <a>PaymentResponse</a>.
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <dfn>[[\retryPromise]]</dfn>
+            </td>
+            <td>
+              Null, or a <a>Promise</a> that resolves when a <a>user accepts
+              the payment request</a> or rejects if the <a>user aborts the
+              payment request</a>.
             </td>
           </tr>
         </table>
@@ -3008,6 +3752,24 @@
             <th>
               Dispatched when…
             </th>
+            <th>
+              Target
+            </th>
+          </tr>
+          <tr>
+            <td>
+              <code><dfn>merchantvalidation</dfn></code>
+            </td>
+            <td>
+              <a>MerchantValidationEvent</a>
+            </td>
+            <td>
+              The user agent requires the merchant to perform merchant
+              validation.
+            </td>
+            <td>
+              <a>PaymentRequest</a>
+            </td>
           </tr>
           <tr>
             <td>
@@ -3018,6 +3780,9 @@
             </td>
             <td>
               The user provides a new shipping address.
+            </td>
+            <td>
+              <a>PaymentRequest</a>
             </td>
           </tr>
           <tr>
@@ -3030,8 +3795,286 @@
             <td>
               The user chooses a new shipping option.
             </td>
+            <td>
+              <a>PaymentRequest</a>
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <code><dfn>payerdetailchange</dfn></code>
+            </td>
+            <td>
+              <a>PaymentRequestUpdateEvent</a>
+            </td>
+            <td>
+              The user changes the payer name, the payer email, or the payer
+              phone (see <a>payer detail changed algorithm</a>).
+            </td>
+            <td>
+              <a>PaymentResponse</a>
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <code><dfn>paymentmethodchange</dfn></code>
+            </td>
+            <td>
+              <a>PaymentMethodChangeEvent</a>
+            </td>
+            <td>
+              The user chooses a different <a>payment method</a> within a
+              <a>payment handler</a>.
+            </td>
+            <td>
+              <a>PaymentRequest</a>
+            </td>
           </tr>
         </table>
+      </section>
+      <section data-dfn-for="MerchantValidationEvent" data-link-for=
+      "MerchantValidationEvent">
+        <h2>
+          <dfn>MerchantValidationEvent</dfn> interface
+        </h2>
+        <pre class="idl">
+          [Constructor(DOMString type, optional MerchantValidationEventInit eventInitDict),
+          SecureContext, Exposed=Window]
+          interface MerchantValidationEvent : Event {
+            readonly attribute DOMString methodName;
+            readonly attribute USVString validationURL;
+            void complete(Promise&lt;any&gt; merchantSessionPromise);
+          };
+        </pre>
+        <section>
+          <h2>
+            <dfn>methodName</dfn> attribute
+          </h2>
+          <p data-link-for="MerchantValidationEventInit">
+            When getting, returns the value it was initialized with. See
+            <a>methodName</a> member of <a>MerchantValidationEventInit</a> for
+            more information.
+          </p>
+        </section>
+        <section>
+          <h3>
+            <dfn data-lt=
+            "MerchantValidationEvent.MerchantValidationEvent()"><code>MerchantValidationEvent</code>
+            constructor</dfn>
+          </h3>
+          <p data-tests=
+          "MerchantValidationEvent/constructor.https.html, MerchantValidationEvent/constructor.http.html">
+            The <a data-cite="dom#concept-event-constructor-ext">event
+            constructing steps</a>, which take a <a>MerchantValidationEvent</a>
+            <var>event</var>, are as follows:
+          </p>
+          <ol class="algorithm">
+            <li>Let <var>base</var> be the <a data-cite=
+            "dom#context-object">event</a>’s <a data-cite=
+            "html/multipage/webappapis.html#relevant-settings-object">relevant
+            settings object</a>’s <a data-cite=
+            "html/multipage/webappapis.html#api-base-url">API base URL</a>.
+            </li>
+            <li data-link-for="MerchantValidationEventInit">Let
+            <var>validationURL</var> be the result of <a data-cite=
+            "url#concept-url-parser">URL parsing</a>
+            <var>eventInitDict</var>["<a>validationURL</a>"] and
+            <var>base</var>.
+            </li>
+            <li>If <var>validationURL</var> is failure, throw a
+            <a>TypeError</a>.
+            </li>
+            <li>Initialize <var>event</var>.<a>validationURL</a> attribute to
+            <var>validationURL</var>.
+            </li>
+            <li>If <var>eventInitDict</var>["<a>methodName</a>"] is not the
+            empty string, run the steps to <a data-cite=
+            "payment-method-id#dfn-validate-a-payment-method-identifier">validate
+            a payment method identifier</a> with
+            <var>eventInitDict</var>["<a>methodName</a>"]. If it returns false,
+            then throw a <a>RangeError</a> exception. Optionally, inform the
+            developer that the payment method identifier is invalid.
+            </li>
+            <li>Initialize <var>event</var>.<a>methodName</a> attribute to
+            <var>eventInitDict</var>["<a>methodName</a>"].
+            </li>
+            <li>Initialize <var>event</var>.<a data-lt=
+            "mechvalidation.waitForUpdate">[[\waitForUpdate]]</a> to false.
+            </li>
+          </ol>
+        </section>
+        <section>
+          <h3>
+            <dfn>validationURL</dfn> attribute
+          </h3>
+          <p>
+            A <a data-cite="url#concept-url">URL</a> from which a developer can
+            fetch <a>payment handler</a>-specific verification data. By then
+            passing that data (or a promise that resolves with that data) to
+            <a>complete()</a>, the user agent can verify that the payment
+            request is from a authorized merchant.
+          </p>
+          <p>
+            When getting, returns the value it was <a data-cite=
+            "dom#inner-event-creation-steps">initialized</a> with.
+          </p>
+        </section>
+        <section>
+          <h3>
+            <dfn>complete()</dfn> method
+          </h3>
+          <p data-tests="MerchantValidationEvent/complete-method.https.html">
+            The <a>MerchantValidationEvent</a>'s
+            <code>complete(<var>merchantSessionPromise</var>)</code> method
+            MUST act as follows:
+          </p>
+          <ol class="algorithm">
+            <li>Let <var>event</var> be the <a>context object</a>.
+            </li>
+            <li>If <var>event</var>'s <a>isTrusted</a> attribute is false, then
+            <a>throw</a> an "<a>InvalidStateError</a>" <a>DOMException</a>.
+            </li>
+            <li>If <var>event</var>.<a data-lt=
+            "mechvalidation.waitForUpdate">[[\waitForUpdate]]</a> is true, then
+            <a>throw</a> an "<a>InvalidStateError</a>" <a>DOMException</a>.
+            </li>
+            <li>Let <var>request</var> be <var>event</var>'s <a data-cite=
+            "dom#event-target">target</a>.
+            </li>
+            <li>If <var>request</var>.<a>[[\state]]</a> is not
+            "<a>interactive</a>", then <a>throw</a> an
+            "<a>InvalidStateError</a>" <a>DOMException</a>.
+            </li>
+            <li>If <var>request</var>.<a>[[\updating]]</a> is true, then
+            <a>throw</a> an "<a>InvalidStateError</a>" <a>DOMException</a>.
+            </li>
+            <li>Set <var>event</var>'s <a>stop propagation flag</a> and <a>stop
+            immediate propagation flag</a>.
+            </li>
+            <li>Set <var>event</var>.<a data-lt=
+            "mechvalidation.waitForUpdate">[[\waitForUpdate]]</a> to true.
+            </li>
+            <li>Run the <a>validate merchant's details algorithm</a> with <var>
+              merchantSessionPromise</var> and <var>request</var>.
+            </li>
+          </ol>
+        </section>
+        <section>
+          <h2>
+            Internal Slots
+          </h2>
+          <p>
+            Instances of <a>MerchantValidationEvent</a> are created with the
+            internal slots in the following table:
+          </p>
+          <table>
+            <tr>
+              <th>
+                Internal Slot
+              </th>
+              <th>
+                Description (<em>non-normative</em>)
+              </th>
+            </tr>
+            <tr>
+              <td>
+                <dfn data-lt-nodefault="" data-lt=
+                "mechvalidation.waitForUpdate">[[\waitForUpdate]]</dfn>
+              </td>
+              <td>
+                A boolean indicating whether an <a>complete()</a>-initiated
+                update is currently in progress.
+              </td>
+            </tr>
+          </table>
+        </section>
+        <section data-dfn-for="MerchantValidationEventInit" data-link-for=
+        "MerchantValidationEventInit">
+          <h3>
+            <dfn>MerchantValidationEventInit</dfn> dictionary
+          </h3>
+          <pre class="idl">
+            dictionary MerchantValidationEventInit : EventInit {
+              DOMString methodName = "";
+              USVString validationURL = "";
+            };
+          </pre>
+          <dl>
+            <dt>
+              <dfn>methodName</dfn> member
+            </dt>
+            <dd>
+              A <a>payment method identifier</a> representing the <a>payment
+              handler</a> that is requiring <a>merchant validation</a>.
+            </dd>
+            <dt>
+              <dfn>validationURL</dfn> member
+            </dt>
+            <dd>
+              A URL from which a developer would fetch <a>payment
+              handler</a>-specific verification data.
+            </dd>
+          </dl>
+        </section>
+      </section>
+      <section data-dfn-for="PaymentMethodChangeEvent" data-link-for=
+      "PaymentMethodChangeEvent">
+        <h2>
+          <dfn>PaymentMethodChangeEvent</dfn> interface
+        </h2>
+        <pre class="idl">
+          [Constructor(DOMString type, optional PaymentMethodChangeEventInit eventInitDict), SecureContext, Exposed=Window]
+          interface PaymentMethodChangeEvent : PaymentRequestUpdateEvent {
+            readonly attribute DOMString methodName;
+            readonly attribute object? methodDetails;
+          };
+        </pre>
+        <section>
+          <h2>
+            <dfn>methodDetails</dfn> attribute
+          </h2>
+          <p data-link-for="PaymentMethodChangeEventInit">
+            When getting, returns the value it was initialized with. See
+            <a>methodDetails</a> member of <a>PaymentMethodChangeEventInit</a>
+            for more information.
+          </p>
+        </section>
+        <section>
+          <h2>
+            <dfn>methodName</dfn> attribute
+          </h2>
+          <p data-link-for="PaymentMethodChangeEventInit">
+            When getting, returns the value it was initialized with. See
+            <a>methodName</a> member of <a>PaymentMethodChangeEventInit</a> for
+            more information.
+          </p>
+        </section>
+        <section data-dfn-for="PaymentMethodChangeEventInit" data-link-for=
+        "PaymentMethodChangeEventInit">
+          <h3>
+            <dfn>PaymentMethodChangeEventInit</dfn> dictionary
+          </h3>
+          <pre class="idl">
+            dictionary PaymentMethodChangeEventInit : PaymentRequestUpdateEventInit {
+              DOMString methodName = "";
+              object? methodDetails = null;
+            };
+          </pre>
+          <dl>
+            <dt>
+              <dfn>methodName</dfn> member
+            </dt>
+            <dd>
+              A string representing the <a>payment method identifier</a>.
+            </dd>
+            <dt>
+              <dfn>methodDetails</dfn> member
+            </dt>
+            <dd>
+              An object representing some data from the payment method, or
+              null.
+            </dd>
+          </dl>
+        </section>
       </section>
       <section data-dfn-for="PaymentRequestUpdateEvent" data-link-for=
       "PaymentRequestUpdateEvent">
@@ -3131,8 +4174,9 @@
             </pre>
           </aside>
           <p data-tests=
-          "payment-request-update-event-updatewith-method.https.html">
-            The <a>updateWith(detailsPromise)</a> method MUST act as follows:
+          "PaymentRequestUpdateEvent/updatewith-method.https.html, PaymentRequestUpdateEvent/updateWith-incremental-update-manual.https.html">
+            The <a><code>updateWith(<var>detailsPromise</var>)</code></a>
+            method MUST act as follows:
           </p>
           <ol class="algorithm">
             <li>Let <var>event</var> be this <a>PaymentRequestUpdateEvent</a>
@@ -3145,9 +4189,17 @@
             <li>If <var>event</var>.<a>[[\waitForUpdate]]</a> is true, then <a>
               throw</a> an "<a>InvalidStateError</a>" <a>DOMException</a>.
             </li>
-            <li>Let <var>request</var> be the value of <var>event</var>'s
-            <code><a data-cite="DOM#dom-event-target">target</a></code>
-            attribute.
+            <li>If <var>event</var>'s <a data-cite=
+            "DOM#event-target">target</a> is an instance of
+            <a>PaymentResponse</a>, let <var>request</var> be
+            <var>event</var>'s <a data-cite=
+            "DOM#event-target">target</a>.<a>[[\request]]</a>.
+            </li>
+            <li>Otherwise, let <var>request</var> be the value of
+            <var>event</var>'s <a data-cite="DOM#event-target">target</a>.
+            </li>
+            <li>Assert: <var>request</var> is an instance of
+            <a>PaymentRequest</a>.
             </li>
             <li>If <var>request</var>.<a>[[\state]]</a> is not
             "<a>interactive</a>", then <a>throw</a> an
@@ -3160,15 +4212,6 @@
             immediate propagation flag</a>.
             </li>
             <li>Set <var>event</var>.<a>[[\waitForUpdate]]</a> to true.
-            </li>
-            <li>Set <var>request</var>.<a>[[\updating]]</a> to true.
-            </li>
-            <li>The <a>user agent</a> SHOULD disable the user interface that
-            allows the user to accept the payment request. This is to ensure
-            that the payment is not accepted until developers have made changes
-            required by the change. Developers MUST settle the
-            <var>detailsPromise</var> to indicate that the payment request is
-            valid again.
             </li>
             <li>Run the <a>update a <code>PaymentRequest</code>'s details
             algorithm</a> with <var>detailsPromise</var> and
@@ -3225,6 +4268,78 @@
       </p>
       <section>
         <h2>
+          Merchant validation
+        </h2>
+        <p>
+          <dfn data-lt="Validate the merchant">Merchant validation</dfn> is the
+          process by which a <a>payment handler</a> validates the identity of a
+          merchant against some <var>value</var> (usually some cryptographic
+          challenge response). Validated merchants are allowed to interface
+          with a <a>payment handler</a>. Details of how actual validation is
+          performed is outside the scope of this specification.
+        </p>
+        <p>
+          It is OPTIONAL for a <a>payment handler</a> to support <a>merchant
+          validation</a>.
+        </p>
+        <p>
+          For <a>payment methods</a> that support <a>merchant validation</a>,
+          the user agent runs the <dfn>request merchant validation
+          algorithm</dfn>. The algorithm takes a <a data-cite=
+          "webidl#idl-USVString"><code>USVString</code></a>
+          <var>merchantSpecificURL</var>, provided by the <a>payment
+          handler</a>:
+        </p>
+        <ol class="algorithm">
+          <li>Let <var>request</var> be the <a>PaymentRequest</a> object that
+          the user is interacting with.
+          </li>
+          <li>Let <var>validationURL</var> be a <a data-cite=
+          "url#absolute-url-string">absolute URL string</a> from which a
+          developer can fetch <a>payment handler</a>-specific verification
+          data.
+          </li>
+          <li>Let <var>methodName</var> be the <a>payment method identifier</a>
+          for the <a>payment handler</a> that is requiring <a>merchant
+          validation</a>.
+          </li>
+          <li>
+            <a>Queue a task</a> on the <a>user interaction task source</a> to
+            run the following steps:
+            <ol data-link-for="MerchantValidationEventInit">
+              <li>Assert: <var>request</var>.<a>[[\updating]]</a> is false.
+              </li>
+              <li>Assert: <var>request</var>.<a>[[\state]]</a> is
+              "<a>interactive</a>".
+              </li>
+              <li>Let <var>eventInitDict</var> be an new
+              <a>MerchantValidationEventInit</a> dictionary.
+              </li>
+              <li>Set <var>eventInitDict</var>["<a>validationURL</a>"] to <var>
+                validationURL</var>.
+              </li>
+              <li>Set <var>eventInitDict</var>["<a>methodName</a>"] to
+              <var>methodName</var>.
+              </li>
+              <li>Let <var>event</var> be the result of <a data-cite=
+              "dom#concept-event-constructor">constructing</a> a
+              <a>MerchantValidationEvent</a> with "<a>merchantvalidation</a>"
+              and <var>eventInitDict</var>.
+              </li>
+              <li>Initialize <var>event</var>’s <a data-cite=
+              "dom#dom-event-istrusted"><code>isTrusted</code></a> attribute to
+              true.
+              </li>
+              <li>
+                <a data-cite="dom#concept-event-dispatch">Dispatch</a>
+                <var>event</var> to <var>request</var>.
+              </li>
+            </ol>
+          </li>
+        </ol>
+      </section>
+      <section>
+        <h2>
           Shipping address changed algorithm
         </h2>
         <p data-tests=
@@ -3235,8 +4350,6 @@
         <ol class="algorithm">
           <li>Let <var>request</var> be the <a>PaymentRequest</a> object that
           the user is interacting with.
-          </li>
-          <li>Let <var>name</var> be "<a>shippingaddresschange</a>".
           </li>
           <li>
             <a>Queue a task</a> on the <a>user interaction task source</a> to
@@ -3274,7 +4387,7 @@
               <var>request</var> to <var>address</var>.
               </li>
               <li>Run the <a>PaymentRequest updated algorithm</a> with
-              <var>request</var> and <var>name</var>.
+              <var>request</var> and "<a>shippingaddresschange</a>".
               </li>
             </ol>
           </li>
@@ -3293,8 +4406,6 @@
           <li>Let <var>request</var> be the <a>PaymentRequest</a> object that
           the user is interacting with.
           </li>
-          <li>Let <var>name</var> be "<a>shippingoptionchange</a>".
-          </li>
           <li>
             <a>Queue a task</a> on the <a>user interaction task source</a> to
             run the following steps:
@@ -3305,7 +4416,46 @@
               <a>PaymentShippingOption</a> provided by the user.
               </li>
               <li>Run the <a>PaymentRequest updated algorithm</a> with
-              <var>request</var> and <var>name</var>.
+              <var>request</var> and "<a>shippingoptionchange</a>".
+              </li>
+            </ol>
+          </li>
+        </ol>
+      </section>
+      <section>
+        <h2>
+          Payment method changed algorithm
+        </h2>
+        <p>
+          A <a>payment handler</a> MAY run the <dfn>payment method changed
+          algorithm</dfn> when the user changes <a>payment method</a> with
+          <var>methodDetails</var>, which is either <a data-cite=
+          "WEBIDL#idl-dictionary">dictionary</a> or an <a data-cite=
+          "WEBIDL#idl-object">object</a> or null, and a <var>methodName</var>,
+          which is a DOMString that represents the <a>payment method
+          identifier</a> of the <a>payment handler</a> the user is interacting
+          with:
+        </p>
+        <ol class="algorithm">
+          <li>Let <var>request</var> be the <a>PaymentRequest</a> object that
+          the user is interacting with.
+          </li>
+          <li>
+            <a>Queue a task</a> on the <a>user interaction task source</a> to
+            run the following steps:
+            <ol>
+              <li>Assert: <var>request</var>.<a>[[\updating]]</a> is false.
+              Only one update can take place at a time.
+              </li>
+              <li>Assert: <var>request</var>.<a>[[\state]]</a> is
+              "<a>interactive</a>".
+              </li>
+              <li data-link-for="PaymentMethodChangeEvent">
+                <a>Fire an event</a> named "<a>paymentmethodchange</a>" at
+                <var>request</var> using <a>PaymentMethodChangeEvent</a>, with
+                its <a>methodName</a> attribute initialized to
+                <var>methodName</var>, and its <a>methodDetails</a> attribute
+                initialized to <var>methodDetails</var>.
               </li>
             </ol>
           </li>
@@ -3322,31 +4472,105 @@
           with an event name of <var>name</var>:
         </p>
         <ol class="algorithm">
-          <li>If the <var>request</var>.<a>[[\updating]]</a> is true, then
-          terminate this algorithm and take no further action. Only one update
-          may take place at a time. The <a>user agent</a> SHOULD ensure that
-          this never occurs.
+          <li>Assert: <var>request</var>.<a>[[\updating]]</a> is false. Only
+          one update can take place at a time.
           </li>
-          <li>If the <var>request</var>.<a>[[\state]]</a> is not set to
-          "<a>interactive</a>", then terminate this algorithm and take no
-          further action. The <a>user agent</a> user interface SHOULD ensure
-          that this never occurs.
+          <li>Assert: <var>request</var>.<a>[[\state]]</a> is
+          "<a>interactive</a>".
           </li>
           <li>Let <var>event</var> be the result of <a data-cite=
-          "!DOM#concept-event-create">creating an event</a> using
-          <a>PaymentRequestUpdateEvent</a>.
+          "DOM#concept-event-create">creating an event</a> using the
+          <a>PaymentRequestUpdateEvent</a> interface.
           </li>
           <li>Initialize <var>event</var>'s <code><a data-cite=
-          "!DOM#dom-event-type">type</a></code> attribute to <var>name</var>.
+          "DOM#dom-event-type">type</a></code> attribute to <var>name</var>.
           </li>
           <li>
-            <a data-cite="!DOM#concept-event-dispatch">Dispatch</a>
+            <a data-cite="DOM#concept-event-dispatch">Dispatch</a>
             <var>event</var> at <var>request</var>.
           </li>
           <li data-link-for="PaymentRequestUpdateEvent">If
           <var>event</var>.<a>[[\waitForUpdate]]</a> is true, disable any part
           of the user interface that could cause another update event to be
           fired.
+          </li>
+        </ol>
+      </section>
+      <section>
+        <h2>
+          Payer detail changed algorithm
+        </h2>
+        <p>
+          The user agent MUST run the <dfn>payer detail changed algorithm</dfn>
+          when the user changes the <var>payer name</var>, or the <var>payer
+          email</var>, or the <var>payer phone</var> in the user interface:
+        </p>
+        <ol class="algorithm">
+          <li>Let <var>request</var> be the <a>PaymentRequest</a> object that
+          the user is interacting with.
+          </li>
+          <li>If <var>request</var>.<a>[[\response]]</a> is null, return.
+          </li>
+          <li>Let <var>response</var> be
+          <var>request</var>.<a>[[\response]]</a>.
+          </li>
+          <li>
+            <a>Queue a task</a> on the <a>user interaction task source</a> to
+            run the following steps:
+            <ol data-link-for="PaymentResponse">
+              <li>Assert: <var>request</var>.<a>[[\updating]]</a> is false.
+              </li>
+              <li>Assert: <var>request</var>.<a>[[\state]]</a> is
+              "<a>interactive</a>".
+              </li>
+              <li>Let <var>options</var> be
+              <var>request</var>.<a>[[\options]]</a>.
+              </li>
+              <li>If <var>payer name</var> changed and
+              <var>options</var>.<a data-link-for=
+              "PaymentOptions">requestPayerName</a> is true:
+                <ol>
+                  <li>Set <var>response</var>'s <a>payerName</a> attribute to
+                  <var>payer name</var>.
+                  </li>
+                </ol>
+              </li>
+              <li>If <var>payer email</var> changed and
+              <var>options</var>.<a data-link-for=
+              "PaymentOptions">requestPayerEmail</a> is true:
+                <ol>
+                  <li>Set <var>response</var>'s <a>payerEmail</a> attribute to
+                  <var>payer email</var>.
+                  </li>
+                </ol>
+              </li>
+              <li>If <var>payer phone</var> changed and
+              <var>options</var>.<a data-link-for=
+              "PaymentOptions">requestPayerPhone</a> is true:
+                <ol>
+                  <li>Set <var>response</var>'s <a>payerPhone</a> attribute to
+                  <var>payer phone</var>.
+                  </li>
+                </ol>
+              </li>
+              <li>Let <var>event</var> be the result of <a data-cite=
+              "DOM#concept-event-create">creating an event</a> using
+              <a>PaymentRequestUpdateEvent</a>.
+              </li>
+              <li>Initialize <var>event</var>'s <code><a data-cite=
+              "DOM#dom-event-type">type</a></code> attribute to
+              "<a>payerdetailchange</a>".
+              </li>
+              <li>
+                <a data-cite="DOM#concept-event-dispatch">Dispatch</a>
+                <var>event</var> at <var>response</var>.
+              </li>
+              <li data-link-for="PaymentRequestUpdateEvent">If
+              <var>event</var>.<a>[[\waitForUpdate]]</a> is true, disable any
+              part of the user interface that could cause another change to the
+              payer details to be fired.
+              </li>
+            </ol>
           </li>
         </ol>
       </section>
@@ -3384,23 +4608,44 @@
             further action. The <a>user agent</a> SHOULD ensure that this never
             occurs.
           </li>
-          <li>Let <var>response</var> be a new <a>PaymentResponse</a>.
+          <li>Let <var>isRetry</var> be true if
+          <var>request</var>.<a>[[\response]]</a> is not null, false otherwise.
           </li>
-          <li>Set the <a data-lt="PaymentResponse.requestId">requestId</a>
-          attribute value of <var>response</var> to the value of
-          <var>request</var>.<a>[[\details]]</a>.<a data-lt=
-          "PaymentDetailsInit.id">id</a>.
+          <li>Let <var>response</var> be
+          <var>request</var>.<a>[[\response]]</a> if <var>isRetry</var> is
+          true, or a new <a>PaymentResponse</a> otherwise.
+          </li>
+          <li>If <var>isRetry</var> if false, initialize the newly created
+          <var>response</var>:
+            <ol>
+              <li>Set <var>response</var>.<a>[[\request]]</a> to
+              <var>request</var>.
+              </li>
+              <li>Set <var>response</var>.<a>[[\retryPromise]]</a> to null.
+              </li>
+              <li>Set <var>response</var>.<a>[[\complete]]</a> to false.
+              </li>
+              <li>Set the <a data-lt="PaymentResponse.requestId">requestId</a>
+              attribute value of <var>response</var> to the value of
+              <var>request</var>.<a>[[\details]]</a>.<a data-lt=
+              "PaymentDetailsInit.id">id</a>.
+              </li>
+              <li>Set <var>request</var>.<a>[[\response]]</a> to
+              <var>response</var>.
+              </li>
+            </ol>
+          </li>
+          <li>Let <var>handler</var> be the <a>payment handler</a> selected by
+          the user.
           </li>
           <li>Set the <a data-lt="PaymentResponse.methodName">methodName</a>
           attribute value of <var>response</var> to the <a>payment method
-          identifier</a> for the <a>payment method</a> that the user selected
-          to accept the payment.
+          identifier</a> of <var>handler</var>.
           </li>
           <li>Set the <a data-lt="PaymentResponse.details">details</a>
-          attribute value of <var>response</var> to an object containing the
-          <a>payment method</a> specific object that will be used by the
-          merchant to process or validate the transaction. The format of this
-          response will be defined for each <a>payment method</a>.
+          attribute value of <var>response</var> to an object resulting from
+          running the <var>handler</var>'s <a>steps to respond to a payment
+          request</a>.
           </li>
           <li>If the <a data-lt=
           "PaymentOptions.requestShipping">requestShipping</a> value of
@@ -3419,7 +4664,7 @@
               value of <var>response</var> to <var>shippingAddress</var>.
               </li>
               <li>Set the <a data-lt=
-              "PaymentResponse.shippingAddress">shippingAddress</a> attribute
+              "PaymentRequest.shippingAddress">shippingAddress</a> attribute
               value of <var>request</var> to <var>shippingAddress</var>.
               </li>
             </ol>
@@ -3453,18 +4698,14 @@
           <var>response</var> to the payer's phone number provided by the user,
           or to null if none was provided. When setting the <a data-lt=
           "PaymentResponse.payerPhone">payerPhone</a> value, the user agent
-          SHOULD format the phone number to adhere to [[!E.164]].
+          SHOULD format the phone number to adhere to [[E.164]].
           </li>
-          <li>Set <var>response</var>.<a>[[\completeCalled]]</a> to false.
+          <li>If <var>isRetry</var> is true, resolve
+          <var>response</var>.<a>[[\retryPromise]]</a> with undefined.
+          Otherwise, resolve <var>request</var>.<a>[[\acceptPromise]]</a> with
+          <var>response</var>.
           </li>
           <li>Set <var>request</var>.<a>[[\state]]</a> to "<a>closed</a>".
-          </li>
-          <li>Set the <a>user agent</a>'s <a>payment request is showing</a>
-          boolean to false.
-          </li>
-          <li>Resolve the pending promise
-          <var>request</var>.<a>[[\acceptPromise]]</a> with
-          <var>response</var>.
           </li>
         </ol>
       </section>
@@ -3497,8 +4738,26 @@
           <li>Set the <a>user agent</a>'s <a>payment request is showing</a>
           boolean to false.
           </li>
-          <li>Reject the promise <var>request</var>.<a>[[\acceptPromise]]</a>
-          with an "<a>AbortError</a>" <a>DOMException</a>.
+          <li>Let <var>error</var> be an "<a>AbortError</a>"
+          <a>DOMException</a>.
+          </li>
+          <li>Let <var>response</var> be
+          <var>request</var>.<a>[[\response]]</a>.
+          </li>
+          <li>If <var>response</var> is not null:
+            <ol>
+              <li>Set <var>response</var>.<a>[[\complete]]</a> to true.
+              </li>
+              <li>Assert: <var>response</var>.<a>[[\retryPromise]]</a> is not
+              null.
+              </li>
+              <li>Reject <var>response</var>.<a>[[\retryPromise]]</a> with
+              <var>error</var>.
+              </li>
+            </ol>
+          </li>
+          <li>Otherwise, reject <var>request</var>.<a>[[\acceptPromise]]</a>
+          with <var>error</var>.
           </li>
         </ol>
       </section>
@@ -3512,21 +4771,29 @@
           <var>detailsPromise</var> and a <a>PaymentRequest</a>
           <var>request</var>. The steps are conditional on the
           <var>detailsPromise</var> settling. If <var>detailsPromise</var>
-          never settles then the payment request is blocked. Users SHOULD
-          always be able to cancel a payment request. Implementations MAY
-          choose to implement a timeout for pending updates if
-          <var>detailsPromise</var> doesn't settle in a reasonable amount of
-          time. If an implementation chooses to implement a timeout, they must
+          never settles then the payment request is blocked. The user agent
+          SHOULD provide the user with a means to abort a payment request.
+          Implementations MAY choose to implement a timeout for pending updates
+          if <var>detailsPromise</var> doesn't settle in a reasonable amount of
+          time. If an implementation chooses to implement a timeout, they MUST
           execute the steps listed below in the "upon rejection" path. Such a
           timeout is a fatal error for the payment request.
         </p>
         <ol class="algorithm">
+          <li>Set <var>request</var>.<a>[[\updating]]</a> to true.
+          </li>
+          <li>
+            <a>In parallel</a>, disable the user interface that allows the user
+            to accept the payment request. This is to ensure that the payment
+            is not accepted until the user interface is updated with any new
+            details.
+          </li>
           <li>
             <a>Upon rejection</a> of <var>detailsPromise</var>:
             <ol>
               <li>
-                <a>Abort the update</a> with an "<a>AbortError</a>"
-                <a>DOMException</a>.
+                <a>Abort the update</a> with <var>request</var> and an
+                "<a>AbortError</a>" <a>DOMException</a>.
               </li>
             </ol>
           </li>
@@ -3535,16 +4802,17 @@
             <var>value</var>:
             <ol data-link-for="PaymentDetailsBase">
               <li>Let <var>details</var> be the result of <a data-cite=
-              "!WEBIDL#es-dictionary">converting</a> <var>value</var> to a <a>
-                PaymentDetailsUpdate</a> dictionary. If this <a>throws</a> an
-                exception, <a>abort the update</a> with the thrown exception.
+              "WEBIDL#es-dictionary">converting</a> <var>value</var> to a
+              <a>PaymentDetailsUpdate</a> dictionary. If this <a>throws</a> an
+              exception, <a>abort the update</a> with <var>request</var> and
+              with the thrown exception.
               </li>
               <li>Let <var>serializedModifierData</var> be an empty list.
               </li>
               <li>Let <var>selectedShippingOption</var> be null.
               </li>
               <li>Let <var>shippingOptions</var> be an empty
-                <code><a data-cite="!WEBIDL#idl-sequence">sequence</a></code>&lt;<a>PaymentShippingOption</a>&gt;.
+                <code><a data-cite="WEBIDL#idl-sequence">sequence</a></code>&lt;<a>PaymentShippingOption</a>&gt;.
               </li>
               <li>Validate and canonicalize the details:
                 <ol>
@@ -3552,11 +4820,11 @@
                   member of <var>details</var> is present, then:
                     <ol>
                       <li>
-                        <a>Check and canonicalize total</a>
+                        <a>Check and canonicalize total amount</a>
                         <var>details</var>.<a>total</a>.<a data-lt=
                         "PaymentItem.amount">amount</a>. If an exception is
-                        thrown, then <a>abort the update</a> with that
-                        exception.
+                        thrown, then <a>abort the update</a> with
+                        <var>request</var> and that exception.
                       </li>
                     </ol>
                   </li>
@@ -3568,8 +4836,8 @@
                         <a>Check and canonicalize amount</a>
                         <var>item</var>.<a data-lt=
                         "PaymentItem.amount">amount</a>. If an exception is
-                        thrown, then <a>abort the update</a> with that
-                        exception.
+                        thrown, then <a>abort the update</a> with
+                        <var>request</var> and that exception.
                       </li>
                     </ol>
                   </li>
@@ -3579,37 +4847,32 @@
                   "PaymentOptions.requestShipping">requestShipping</a> is true,
                   then:
                     <ol>
-                      <li>Set <var>shippingOptions</var> to
-                      <var>details</var>.<a>shippingOptions</a>.
-                      </li>
-                      <li>Let <var>seenIDs</var> be an empty list.
+                      <li>Let <var>seenIDs</var> be an empty set.
                       </li>
                       <li>For each <var>option</var> in
-                      <var>shippingOptions</var>:
+                      <var>details</var>.<a>shippingOptions</a>:
                         <ol>
                           <li>
                             <a>Check and canonicalize amount</a>
                             <var>option</var>.<a data-lt=
                             "PaymentShippingOption.amount">amount</a>. If an
                             exception is thrown, then <a>abort the update</a>
-                            with that exception.
+                            with <var>request</var> and that exception.
                           </li>
                           <li data-tests=
                           "PaymentRequestUpdateEvent/updateWith-duplicate-shipping-options-manual.https.html">
-                          If <var>seenIDs</var> contains
-                          <var>option</var>.<a data-lt=
-                          "PaymentShippingOption.id">id</a>, then <a>abort the
-                          update</a> with a <a>TypeError</a>.
+                          If <var>seenIDs</var>[<var>option</var>.<a data-lt=
+                          "PaymentShippingOption.id">id</a>] exists, then
+                          <a>abort the update</a> with <var>request</var> and a
+                          <a>TypeError</a>.
                           </li>
-                          <li>Otherwise, append <var>option</var>.<a data-lt=
+                          <li>Append <var>option</var>.<a data-lt=
                           "PaymentShippingOption.id">id</a> to
                           <var>seenIDs</var>.
                           </li>
-                        </ol>
-                      </li>
-                      <li>For each <var>option</var> in
-                      <var>shippingOptions</var>:
-                        <ol>
+                          <li>Append <var>option</var> to
+                          <var>shippingOptions</var>.
+                          </li>
                           <li>If <var>option</var>.<a data-lt=
                           "PaymentShippingOption.selected">selected</a> is
                           true, then set <var>selectedShippingOption</var> to
@@ -3640,19 +4903,20 @@
                             <var>modifier</var>.<a data-lt=
                             "PaymentDetailsModifier.supportedMethods">supportedMethods</a>.
                             If it returns false, then <a>abort the update</a>
-                            with a <a>RangeError</a> exception. Optional,
-                            inform the developer that the payment method
-                            identifier is invalid.
+                            with <var>request</var> and a <a>RangeError</a>
+                            exception. Optionally, inform the developer that
+                            the payment method identifier is invalid.
                           </li>
                           <li>If the <a>total</a> member of <var>modifier</var>
                           is present, then:
                             <ol>
                               <li>
-                                <a>Check and canonicalize total</a>
+                                <a>Check and canonicalize total amount</a>
                                 <var>modifier</var>.<a>total</a>.<a data-lt=
                                 "PaymentItem.amount">amount</a>. If an
                                 exception is thrown, then <a>abort the
-                                update</a> with that exception.
+                                update</a> with <var>request</var> and that
+                                exception.
                               </li>
                             </ol>
                           </li>
@@ -3666,7 +4930,8 @@
                                 <var>item</var>.<a data-lt=
                                 "PaymentItem.amount">amount</a>. If an
                                 exception is thrown, then <a>abort the
-                                update</a> with that exception.
+                                update</a> with <var>request</var> and that
+                                exception.
                               </li>
                             </ol>
                           </li>
@@ -3678,8 +4943,8 @@
                             <var>modifier</var>.<a data-lt=
                             "PaymentDetailsModifier.data">data</a> into a
                             string. If <a>JSON-serializing</a> throws an
-                            exception, then <a>abort the update</a> with that
-                            exception.
+                            exception, then <a>abort the update</a> with
+                            <var>request</var> and that exception.
                           </li>
                           <li>Add <var>serializedData</var> to
                           <var>serializedModifierData</var>.
@@ -3743,79 +5008,251 @@
                       </li>
                     </ol>
                   </li>
-                  <li>If <var>request</var>.<a>[[\options]]</a>.<a data-lt=
-                  "PaymentOptions.requestShipping">requestShipping</a> is true,
-                  and
-                  <var>request</var>.<a>[[\details]]</a>.<a>shippingOptions</a>
-                  is empty, then the developer has signified that there are no
-                  valid shipping options for the currently-chosen shipping
-                  address (given by <var>request</var>'s <a data-lt=
-                  "PaymentRequest.shippingAddress">shippingAddress</a>). In
-                  this case, the user agent SHOULD display an error indicating
-                  this, and MAY indicate that the currently-chosen shipping
-                  address is invalid in some way. The user agent SHOULD use the
-                  <a data-lt="PaymentDetailsUpdate.error">error</a> member of
-                  <var>details</var>, if it is present, to give more
-                  information about why there are no valid shipping options for
-                  that address.
+                  <li>
+                    <p>
+                      If <var>request</var>.<a>[[\options]]</a>.<a data-lt=
+                      "PaymentOptions.requestShipping">requestShipping</a> is
+                      true, and
+                      <var>request</var>.<a>[[\details]]</a>.<a>shippingOptions</a>
+                      is empty, then the developer has signified that there are
+                      no valid shipping options for the currently-chosen
+                      shipping address (given by <var>request</var>'s
+                      <a data-lt=
+                      "PaymentRequest.shippingAddress">shippingAddress</a>).
+                    </p>
+                    <p>
+                      In this case, the user agent SHOULD display an error
+                      indicating this, and MAY indicate that the
+                      currently-chosen shipping address is invalid in some way.
+                      The user agent SHOULD use the <a data-lt=
+                      "PaymentDetailsUpdate.error">error</a> member of
+                      <var>details</var>, if it is present, to give more
+                      information about why there are no valid shipping options
+                      for that address.
+                    </p>
+                    <p>
+                      Further, if <var>details</var>["<a data-lt=
+                      "PaymentDetailsUpdate.shippingAddressErrors">shippingAddressErrors</a>"]
+                      member is present, the user agent SHOULD display an error
+                      specifically for each erroneous field of the shipping
+                      address. This is done by matching each present member of
+                      the <a>AddressErrors</a> to a corresponding input field
+                      in the shown user interface.
+                    </p>
+                    <p data-link-for="PaymentDetailsUpdate">
+                      Similarly, if <var>details</var>["<a>payerErrors</a>"]
+                      member is present and
+                      <var>request</var>.<a>[[\options]]</a>'s <a data-lt=
+                      "PaymentOptions.requestPayerName">requestPayerName</a>,
+                      <a data-lt=
+                      "PaymentOptions.requestPayerEmail">requestPayerEmail</a>,
+                      or <a data-lt=
+                      "PaymentOptions.requestPayerPhone">requestPayerPhone</a>
+                      is true, then display an error specifically for each
+                      erroneous field.
+                    </p>
+                    <p data-link-for="PaymentDetailsUpdate">
+                      Likewise, if
+                      <var>details</var>["<a>paymentMethodErrors</a>"] is
+                      present, then display errors specifically for each
+                      erroneous input field for the particular payment method.
+                    </p>
                   </li>
                 </ol>
               </li>
             </ol>
           </li>
-          <li>In either case, run the following steps, after either the upon
-          rejection or upon fulfillment steps have concluded:
-            <ol>
-              <li>Set <var>request</var>.<a>[[\updating]]</a> to false.
-              </li>
-              <li>The <a>user agent</a> SHOULD update the user interface based
-              on any changed values in <var>request</var>. If appropriate, the
-              user agent SHOULD re-enable user interface elements that might
-              have been disabled prior to running this algorithm.
-              </li>
-            </ol>
+          <li>Set <var>request</var>.<a>[[\updating]]</a> to false.
+          </li>
+          <li>Update the user interface based on any changed values in
+          <var>request</var>. Re-enable user interface elements disabled prior
+          to running this algorithm.
           </li>
         </ol>
-        <p>
-          If any of the above steps say to <dfn>abort the update</dfn> with an
-          exception <var>exception</var>, then:
-        </p>
-        <ol>
-          <li>Abort the current user interaction and close down any remaining
-          user interface.
-          </li>
-          <li>Set <var>request</var>.<a>[[\state]]</a> to "<a>closed</a>".
-          </li>
-          <li>Reject the promise <var>request</var>.<a>[[\acceptPromise]]</a>
-          with <var>exception</var>.
-          </li>
-          <li>Abort the algorithm.
-          </li>
-        </ol>
+        <section>
+          <h2>
+            Abort the update
+          </h2>
+          <p>
+            To <dfn>abort the update</dfn> with a <a>PaymentRequest</a>
+            <var>request</var> and <a data-cite=
+            "WEBIDL#dfn-exception">exception</a> <var>exception</var>:
+          </p>
+          <ol class="algorithm">
+            <li>Optionally, show an error message to the user when letting them
+            know an error has occurred.
+            </li>
+            <li>Abort the current user interaction and close down any remaining
+            user interface.
+            </li>
+            <li>
+              <a>Queue a task</a> on the <a>user interaction task source</a> to
+              perform the following steps:
+              <ol>
+                <li>Set the <a>user agent</a>'s <a>payment request is
+                showing</a> boolean to false.
+                </li>
+                <li>Set <var>request</var>.<a>[[\state]]</a> to
+                "<a>closed</a>".
+                </li>
+                <li>Let <var>response</var> be
+                <var>request</var>.<a>[[\response]]</a>.
+                </li>
+                <li>If <var>response</var> is not null, then:
+                  <ol>
+                    <li>Set <var>response</var>.<a>[[\complete]]</a> to true.
+                    </li>
+                    <li>Assert: <var>response</var>.<a>[[\retryPromise]]</a> is
+                    not null.
+                    </li>
+                    <li>Reject <var>response</var>.<a>[[\retryPromise]]</a>
+                    with <var>exception</var>.
+                    </li>
+                  </ol>
+                </li>
+                <li>Otherwise, reject
+                <var>request</var>.<a>[[\acceptPromise]]</a> with
+                <var>exception</var>.
+                </li>
+                <li>Set <var>request</var>.<a>[[\updating]]</a> to false.
+                </li>
+              </ol>
+            </li>
+            <li>Abort the algorithm.
+            </li>
+          </ol>
+        </section>
         <div class="note">
           <p>
-            <a data-lt="abort the update">Aborting the update</a> is performed
-            when there is a fatal error updating the payment request, such as
-            the supplied <var>detailsPromise</var> rejecting, or its
-            fulfillment value containing invalid data. This would potentially
-            leave the payment request in an inconsistent state since the
-            developer hasn't successfully handled the change event.
+            <a>Abort the update</a> runs when there is a fatal error updating
+            the payment request, such as the supplied <var>detailsPromise</var>
+            rejecting, or its fulfillment value containing invalid data. This
+            would potentially leave the payment request in an inconsistent
+            state since the developer hasn't successfully handled the change
+            event.
+          </p>
+          <p>
             Consequently, the <a>PaymentRequest</a> moves to a "<a>closed</a>"
             state. The error is signaled to the developer through the rejection
             of the <a>[[\acceptPromise]]</a>, i.e., the promise returned by
             <a data-lt="PaymentRequest.show">show()</a>.
           </p>
-          <p>
-            <a>User agents</a> might show an error message to the user when
-            this occurs.
+          <p data-link-for="PaymentResponse">
+            Similarly, <a>abort the update</a> occurring during <a>retry()</a>
+            causes the <a>[[\retryPromise]]</a> to reject, and the
+            corresponding <a>PaymentRequest</a>'s <a>[[\complete]]</a> internal
+            slot will be set to true (i.e., it can no longer be used).
           </p>
         </div>
+      </section>
+      <section>
+        <h2>
+          Validate merchant's details algorithm
+        </h2>
+        <p>
+          The <dfn>validate merchant's details algorithm</dfn> takes a
+          <a>Promise</a> <var>opaqueDataPromise</var> and a
+          <a>PaymentRequest</a> <var>request</var>. The steps are conditional
+          on the <var>opaqueDataPromise</var> settling. If
+          <var>opaqueDataPromise</var> never settles then the payment request
+          is blocked. The user agent SHOULD provide the user with a means to
+          abort a payment request. Implementations MAY choose to implement a
+          timeout for pending updates if <var>opaqueDataPromise</var> doesn't
+          settle in a reasonable amount of time. If an implementation chooses
+          to implement a timeout, they MUST execute the steps listed below in
+          the "upon rejection" path. Such a timeout is a fatal error for the
+          payment request.
+        </p>
+        <ol class="algorithm">
+          <li>Set <var>request</var>.<a>[[\updating]]</a> to true.
+          </li>
+          <li>
+            <a>In parallel</a>, disable the user interface that allows the user
+            to accept the payment request. This is to ensure that the payment
+            is not accepted until the user interface is updated with any new
+            details.
+          </li>
+          <li>
+            <a>Upon rejection</a> of <var>opaqueDataPromise</var>:
+            <ol>
+              <li>
+                <a>Abort the update</a> with <var>request</var> and an
+                "<a>AbortError</a>" <a>DOMException</a>.
+              </li>
+            </ol>
+          </li>
+          <li>
+            <a>Upon fulfillment</a> of <var>opaqueDataPromise</var> with value
+            <var>opaqueData</var>:
+            <ol>
+              <li>
+                <a>Validate the merchant</a> using <var>opaqueData</var>.
+              </li>
+              <li>If <var>opaqueData</var> is invalid, as per the validation
+              rules of the <a>payment handler</a>, <a>abort the update</a> with
+              <var>request</var> and an appropriate <a data-cite=
+              "webidl#dfn-exception">exception</a> and return.
+              </li>
+              <li>Otherwise, set <var>request</var>.<a>[[\updating]]</a> to
+              false.
+              </li>
+              <li>Enable the user interface, allowing the request for payment
+              to proceed.
+              </li>
+            </ol>
+          </li>
+        </ol>
       </section>
     </section>
     <section class="informative">
       <h2>
-        Security Considerations
+        Privacy and Security Considerations
       </h2>
+      <section class="informative" data-link-for="PaymentRequest">
+        <h2>
+          User Protections with <code>show()</code> method
+        </h2>
+        <p>
+          To help ensure that users do not inadvertently share sensitive
+          credentials with an origin, this API requires that PaymentRequest's
+          <a>show()</a> method be <a>triggered by user activation</a> (e.g.,
+          via a click or press).
+        </p>
+        <p>
+          To avoid a confusing user experience, this specification limits the
+          user agent to displaying one at a time via the <a>show()</a> method.
+          In addition, the user agent can limit the rate at which a page can
+          call <a>show()</a>.
+        </p>
+      </section>
+      <section class="informative">
+        <h2>
+          Secure contexts
+        </h2>
+        <p>
+          The API defined in this specification is only exposed in
+          <a data-cite="secure-contexts#secure-contexts">secure contexts</a>.
+          In practice, this means that this API is only available over HTTPS.
+          This is to limit the possibly of payment method data (e.g., credit
+          card numbers) being sent in the clear.
+        </p>
+      </section>
+      <section class="informative">
+        <h2>
+          Cross-origin payment requests
+        </h2>
+        <p>
+          It is common for merchants and other payees to delegate checkout and
+          other e-commerce activities to payment service providers through an
+          <a>iframe</a>. This API supports payee-authorized cross-origin
+          iframes through [[HTML]]'s <a>allowpaymentrequest</a> attribute.
+        </p>
+        <p class="Note">
+          <a>Payment handlers</a> have access to both the origin that hosts the
+          <a>iframe</a> and the origin of the <a>iframe</a> content (where the
+          <a>PaymentRequest</a> initiates).
+        </p>
+      </section>
       <section class="informative">
         <h2>
           Encryption of data fields
@@ -3861,12 +5298,33 @@
           a developer (e.g., the shipping address) without user consent.
         </p>
         <p>
+          One way that the API supports limited information sharing is through
+          the "<var>redactList</var>" associated with the creation of
+          <a>physical addresses</a> throughout the API. This feature enables
+          user agents to provide the payee with enough information to compute
+          shipping costs or tax information, while limiting the payee's ability
+          to identify the payer via the address.
+        </p>
+        <p>
           The <a>user agent</a> MUST NOT share the values of the <a data-lt=
           "PaymentDetailsBase.displayItems">displayItems</a> member or
           <a data-lt=
           "PaymentDetailsModifier.additionalDisplayItems">additionalDisplayItems</a>
           member with a third-party <a>payment handler</a> without user
           consent.
+        </p>
+      </section>
+      <section>
+        <h2>
+          canMakePayment() protections
+        </h2>
+        <p data-link-for="PaymentRequest">
+          The <a>canMakePayment()</a> method enables the payee to call
+          <a>show()</a> if the user is ready to take advantage of the API, or
+          to fall back to a legacy checkout experience if not. Because this
+          method shares some information with the payee, user agents are
+          expected to protect the user from abuse of the method, for example,
+          by restricting the number or frequency of calls.
         </p>
       </section>
     </section>
@@ -3879,45 +5337,54 @@
       </p>
       <dl data-sort="">
         <dt>
+          ISO 3366-2
+        </dt>
+        <dd>
+          <dfn data-lt="country subdivision names">Country subdivision
+          name</dfn> and <dfn>country subdivision code element</dfn> are
+          defined in [[ISO3166-2]].
+        </dd>
+        <dt>
           Infra
         </dt>
         <dd>
-          The [[!INFRA] specification defines how to <dfn data-cite=
-          "!INFRA#strip-leading-and-trailing-ascii-whitespace">strip leading
-          and trailing ascii whitespace</dfn>. It also defines the concpet of a
-          <dfn data-cite="!INFRA#list">list</dfn>.
+          The [[INFRA] specification defines how to <dfn data-cite=
+          "INFRA#strip-leading-and-trailing-ascii-whitespace">strip leading and
+          trailing ascii whitespace</dfn>. It also defines the concept of a
+          <dfn data-cite="INFRA#list">list</dfn> and <dfn data-cite=
+          "INFRA#code-point">code point</dfn>.
         </dd>
         <dt>
           Payment Method Identifiers
         </dt>
         <dd>
           The term <dfn data-lt="payment method identifiers">payment method
-          identifier</dfn> is defined by [[!payment-method-id]]. It's an unique
+          identifier</dfn> is defined by [[payment-method-id]]. It's an unique
           identifier for a <a>payment method</a>.
         </dd>
         <dt>
           HTML
         </dt>
         <dd>
-          The following are defined by [[!HTML]]: <code><dfn data-cite=
-          "!HTML/webappapis.html#eventhandler">EventHandler</dfn></code>,
-          <dfn data-cite="!HTML/webappapis.html#queue-a-task">queue a
+          The following are defined by [[HTML]]: <code><dfn data-cite=
+          "HTML/webappapis.html#eventhandler">EventHandler</dfn></code>,
+          <dfn data-cite="HTML/webappapis.html#queue-a-task">queue a
           task</dfn>, <dfn data-cite=
-          "!HTML/webappapis.html#user-interaction-task-source">user interaction
+          "HTML/webappapis.html#user-interaction-task-source">user interaction
           task source</dfn>, <dfn data-cite=
-          "!HTML/webappapis.html#top-level-browsing-context">top-level browsing
+          "HTML/webappapis.html#top-level-browsing-context">top-level browsing
           context</dfn>, <dfn data-cite=
-          "!HTML/webappapis.html#current-settings-object">current settings
+          "HTML/webappapis.html#current-settings-object">current settings
           object</dfn>, <dfn data-cite=
-          "!HTML/iframe-embed-object.html#allowed-to-use">allowed to use</dfn>,
+          "HTML/iframe-embed-object.html#allowed-to-use">allowed to use</dfn>,
           <dfn data-cite=
-          "!HTML/interaction.html#triggered-by-user-activation">triggered by
+          "HTML/interaction.html#triggered-by-user-activation">triggered by
           user activation</dfn>, <dfn data-cite=
-          "!HTML/infrastructure.html#in-parallel">in parallel</dfn>, the
+          "HTML/infrastructure.html#in-parallel">in parallel</dfn>, the
           <code><dfn data-cite=
-          "!HTML/iframe-embed-object.html#the-iframe-element">iframe</dfn></code>
+          "HTML/iframe-embed-object.html#the-iframe-element">iframe</dfn></code>
           element, and the <code><dfn data-cite=
-          "!HTML/iframe-embed-object.html#attr-iframe-allowpaymentrequest">allowpaymentrequest</dfn></code>
+          "HTML/iframe-embed-object.html#attr-iframe-allowpaymentrequest">allowpaymentrequest</dfn></code>
           attribute.
         </dd>
         <dt>
@@ -3925,15 +5392,15 @@
         </dt>
         <dd>
           The terms <dfn data-cite=
-          "!ECMASCRIPT#sec-promise-objects">Promise</dfn>, <dfn data-cite=
-          "!ECMASCRIPT#sec-object-internal-methods-and-internal-slots">internal
+          "ECMASCRIPT#sec-promise-objects">Promise</dfn>, <dfn data-cite=
+          "ECMASCRIPT#sec-object-internal-methods-and-internal-slots">internal
           slot</dfn>, <code><dfn data-cite=
-          "!ECMASCRIPT#sec-native-error-types-used-in-this-standard-rangeerror">
-          RangeError</dfn></code>, <code><dfn data-cite=
-          "!ECMASCRIPT#sec-native-error-types-used-in-this-standard-typeerror">TypeError</dfn></code>,
+          "ECMASCRIPT#sec-native-error-types-used-in-this-standard-rangeerror">RangeError</dfn></code>,
+          <code><dfn data-cite=
+          "ECMASCRIPT#sec-native-error-types-used-in-this-standard-typeerror">TypeError</dfn></code>,
           and <code><dfn data-cite=
-          "!ECMASCRIPT#sec-json.stringify">JSON.stringify</dfn></code> are
-          defined by [[!ECMASCRIPT]].
+          "ECMASCRIPT#sec-json.stringify">JSON.stringify</dfn></code> are
+          defined by [[ECMASCRIPT]].
           <p>
             The term <dfn data-lt=
             "JSON-serialized|JSON-serializing">JSON-serialize</dfn> applied to
@@ -3947,58 +5414,62 @@
           Writing Promise-Using Specifications
         </dt>
         <dd>
-          The terms <dfn data-cite="!PROMISES-GUIDE#upon-fulfillment">upon
-          fulfillment</dfn> and <dfn data-cite=
-          "!PROMISES-GUIDE#upon-rejection">upon rejection</dfn> are defined by
-          [[!PROMISES-GUIDE]].
+          The terms <dfn data-cite="PROMISES-GUIDE#a-new-promise">a new
+          promise</dfn>, <dfn data-cite=
+          "PROMISES-GUIDE#a-promise-rejected-with">a promise rejected
+          with</dfn> <var>r</var>, <dfn data-cite=
+          "PROMISES-GUIDE#upon-fulfillment">upon fulfillment</dfn> and
+          <dfn data-cite="PROMISES-GUIDE#upon-rejection">upon rejection</dfn>
+          are defined by [[PROMISES-GUIDE]].
         </dd>
         <dt>
           DOM
         </dt>
         <dd>
-          The <code><dfn data-cite="!DOM#event">Event</dfn></code> interface,
-          The <code><dfn data-cite=
-          "!DOM#dictdef-eventinit">EventInit</dfn></code> dictionary, and the
-          terms <dfn data-cite="!DOM#concept-event-fire">fire an event</dfn>,
-          <dfn data-cite="!DOM#dispatch-flag">dispatch flag</dfn>,
-          <dfn data-cite="!DOM#stop-propagation-flag">stop propagation
-          flag</dfn>, <code><dfn data-cite=
-          "!DOM#dom-event-istrusted">isTrusted</dfn></code> attribute, and
-          <dfn data-cite="!DOM#stop-immediate-propagation-flag">stop immediate
-          propagation flag</dfn> are defined by [[!DOM]].
+          The <code><dfn data-cite="DOM#event">Event</dfn></code> interface,
+          the <code><dfn data-cite=
+          "DOM#interface-eventtarget">EventTarget</dfn></code> interface, the
+          <code><dfn data-cite="DOM#dictdef-eventinit">EventInit</dfn></code>
+          dictionary, and the terms <dfn data-cite=
+          "DOM#concept-event-fire">fire an event</dfn>, <dfn data-cite=
+          "DOM#dispatch-flag">dispatch flag</dfn>, <dfn data-cite=
+          "DOM#stop-propagation-flag">stop propagation flag</dfn>,
+          <code><dfn data-cite="DOM#dom-event-istrusted">isTrusted</dfn></code>
+          attribute, <dfn data-cite="DOM#context-object">context object</dfn>,
+          and <dfn data-cite="DOM#stop-immediate-propagation-flag">stop
+          immediate propagation flag</dfn> are defined by [[DOM]].
         </dd>
         <dt>
           Web IDL
         </dt>
         <dd>
           <p>
-            When this specification says to <dfn data-cite="!WEBIDL#dfn-throw"
-            data-lt="throws">throw</dfn> an error, the <a>user agent</a> must
-            throw an error as described in [[!WEBIDL]]. When this occurs in a
+            When this specification says to <dfn data-cite=
+            "WEBIDL#dfn-throw">throw</dfn> an error, the <a>user agent</a> must
+            throw an error as described in [[WEBIDL]]. When this occurs in a
             sub-algorithm, this results in termination of execution of the
             sub-algorithm and all ancestor algorithms until one is reached that
             explicitly describes procedures for catching exceptions.
           </p>
           <p>
             The algorithm for <dfn data-cite=
-            "!WEBIDL#dfn-convert-idl-to-ecmascript-value" data-lt=
+            "WEBIDL#dfn-convert-idl-to-ecmascript-value" data-lt=
             "converting">converting an ECMAScript value to a dictionary</dfn>
-            is defined by [[!WEBIDL]].
+            is defined by [[WEBIDL]].
           </p>
           <p>
             <code><dfn data-cite=
-            "!WEBIDL#dfn-DOMException">DOMException</dfn></code> and the
-            following <a>DOMException</a> types from [[!WEBIDL]] are used:
+            "WEBIDL#dfn-DOMException">DOMException</dfn></code> and the
+            following <a>DOMException</a> types from [[WEBIDL]] are used:
+            "<code><dfn data-cite="WEBIDL#aborterror">AbortError</dfn></code>",
             "<code><dfn data-cite=
-            "!WEBIDL#aborterror">AbortError</dfn></code>",
+            "WEBIDL#invalidstateerror">InvalidStateError</dfn></code>",
             "<code><dfn data-cite=
-            "!WEBIDL#invalidstateerror">InvalidStateError</dfn></code>",
+            "WEBIDL#notallowederror">NotAllowedError</dfn></code>",
             "<code><dfn data-cite=
-            "!WEBIDL#notallowederror">NotAllowedError</dfn></code>",
+            "WEBIDL#notsupportederror">NotSupportedError</dfn></code>", and
             "<code><dfn data-cite=
-            "!WEBIDL#notsupportederror">NotSupportedError</dfn></code>", and
-            "<code><dfn data-cite=
-            "!WEBIDL#securityerror">SecurityError</dfn></code>".
+            "WEBIDL#securityerror">SecurityError</dfn></code>".
           </p>
         </dd>
       </dl>
@@ -4006,7 +5477,7 @@
     <section id="conformance">
       <p>
         There is only one class of product that can claim conformance to this
-        specification: a <dfn data-lt="user agents">user agent</dfn>.
+        specification: a <dfn>user agent</dfn>.
       </p>
       <p class="note">
         Although this specification is primarily targeted at web browsers, it
